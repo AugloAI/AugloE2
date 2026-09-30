@@ -1,0 +1,96 @@
+schema: auglo.e2.contract
+schema_version: 1
+contract_version: 0.1.0
+milestone:
+  id: E2
+  state: foundation
+  authority: AugloE2
+  description: Controlled outbound-call experiment
+
+closure_gate:
+  state: open
+  closes_when:
+    - 20 real outbound calls are complete under the cohort constraints
+    - required evidence is accounted for by stable ID or hash
+    - every call is labeled within 48 hours
+    - every unsuccessful or incomplete call has failure attribution
+    - the DR-5 post-run decision is recorded in the Product Chronicle
+
+cohort:
+  call_count: 20
+  call_kind: real_outbound
+  arms: 1
+  config_hashes: 1
+  dialing: serial
+  labeling_deadline_hours: 48
+
+capabilities:
+  C1:
+    name: cohort_admission
+    state: not_implemented
+  C2:
+    name: config_snapshot_freeze
+    state: not_implemented
+  C3:
+    name: serial_dialing
+    state: not_implemented
+  C4:
+    name: outbound_call_execution
+    state: not_implemented
+  C5:
+    name: speech_interaction
+    state: not_implemented
+  C6:
+    name: executable_appointment
+    state: not_implemented
+  C7:
+    name: call_evidence_capture
+    state: not_implemented
+  C8:
+    name: outcome_labeling
+    state: not_implemented
+  C9:
+    name: failure_attribution
+    state: not_implemented
+  C10:
+    name: post_run_decision
+    state: not_implemented
+
+scope:
+  includes:
+    - one controlled E2 cohort
+    - outbound calls and speech interaction
+    - executable appointment outcomes
+    - evidence accounting, labeling, and failure attribution
+    - DR-5 post-run decision
+  excludes:
+    - CRM or DMS integration
+    - dashboards
+    - WhatsApp or inbound calling
+    - multi-agent or multitenant operation
+    - E3 or E4 work
+    - copied AugloAI runtime code
+
+evidence:
+  required:
+    - cohort manifest reference
+    - Config Hash
+    - per-call Call Evidence reference
+    - per-call outcome label and labeling timestamp
+    - Failure Attribution when applicable
+    - DR-5 Product Chronicle event reference
+  git_representation: stable_id_or_hash_only
+  sensitive_material_location: Controlled Storage outside Git
+
+provenance:
+  augloai_commit:
+    status: unresolved
+    value: null
+    required_before: runtime_extraction
+
+current_gaps:
+  - No runtime has been extracted or implemented
+  - AugloAI source commit provenance is unresolved
+  - Config Snapshot and evidence schemas are not yet defined
+  - Capability acceptance criteria are not yet specified
+  - Controlled Storage adapters and access policy are not yet selected

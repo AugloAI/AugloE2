@@ -1,0 +1,45 @@
+schema: auglo.e2.integration-map
+schema_version: 1
+map_version: 0.1.0
+status: candidate
+policy:
+  separation_authority: AugloE2
+  eventual_destination: AugloAI
+  implementation_claim: none
+
+modules:
+  AgentRuntime:
+    interface: Orchestrate one admitted Run under the frozen cohort constraints
+    current_authority: AugloE2 contract; no implementation exists here
+    future_augloai_destination: Runtime orchestration seam after explicit reintegration
+    adapter_expectations: Preserve Run identity, ordering, and observable outcomes
+  ControlSnapshot:
+    interface: Provide the Config Snapshot and Config Hash for a Cohort
+    current_authority: AugloE2 contract; snapshot schema is unresolved
+    future_augloai_destination: Configuration seam after explicit reintegration
+    adapter_expectations: Expose immutable cohort configuration without leaking sensitive values
+  SpeechProviders:
+    interface: Supply speech input and output for an outbound Run
+    current_authority: AugloE2 contract; providers are not selected
+    future_augloai_destination: Speech-provider seam after explicit reintegration
+    adapter_expectations: Preserve provider-neutral outcomes and evidence references
+  BusinessFacts:
+    interface: Provide validated facts needed by the call and appointment outcome
+    current_authority: AugloE2 contract; fact sources are unresolved
+    future_augloai_destination: Business-facts seam after explicit reintegration
+    adapter_expectations: Expose only the minimum validated facts required by the Run
+  Agenda:
+    interface: Validate and represent an Executable Appointment
+    current_authority: AugloE2 contract; scheduling implementation is absent
+    future_augloai_destination: Scheduling seam after explicit reintegration
+    adapter_expectations: Return explicit availability and appointment outcomes
+  Evidence:
+    interface: Record and retrieve stable references for required Call Evidence
+    current_authority: AugloE2 contract; controlled-storage implementation is absent
+    future_augloai_destination: Evidence seam after explicit reintegration
+    adapter_expectations: Keep sensitive material outside Git and expose stable IDs or hashes
+  ComplianceGate:
+    interface: Decide whether a call may enter and continue through a Run
+    current_authority: AugloE2 contract; compliance policy is unresolved
+    future_augloai_destination: Compliance seam after explicit reintegration
+    adapter_expectations: Return explicit allow or deny outcomes with non-sensitive rationale

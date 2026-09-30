@@ -1,0 +1,25 @@
+# Python and tools
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.venv/
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets and local-only evidence
+.env
+.env.*
+*.pem
+*.key
+.local-evidence/
+
+# Local agent state
+.atl/
+.codegraph/
