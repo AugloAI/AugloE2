@@ -1,4 +1,4 @@
-# Initialize AugloE2
+# Initialize the AugloE2 Repository Foundation
 
 ## Intent
 
@@ -24,7 +24,7 @@ Create a clean, local, authoritative repository for milestone E2 without copying
 - [x] T1 — Bootstrap the local Git repository and this recoverable task record.
   - Route: inline bootstrap; required before a delegated writer can target the independent repository.
   - Evidence: repository root initialized on unborn branch `main`.
-- [x] T2 — Create the minimal E2 foundation.
+- [x] T2 — Create the minimal E2 repository foundation.
   - Route: delegated to `gentle-ai-worker` because the foundation spans multiple non-trivial files.
   - Outcome: README, glossary, canonical project contract, integration map, chronology rules, two initial ADRs, and repository exclusions created across nine allowed paths.
   - Evidence: writer reported 269 authored lines; YAML parsing, diff check, and Git status checks passed.
@@ -34,9 +34,10 @@ Create a clean, local, authoritative repository for milestone E2 without copying
   - First verification: failed because this task record contained an absolute host path and the verifier included ignored `.atl/` harness cache files in repository artifacts.
   - Correction: removed the host path, explicitly excluded ignored harness caches, and ignored `.codegraph/` indexing metadata created during incident diagnosis.
   - Final evidence: independent verifier passed; parent spot check printed `contracts-ok` for 10 capabilities and 7 integration Modules.
-- [ ] T4 — Create the initial work-unit commit.
+- [x] T4 — Create the initial work-unit commit.
   - Route: parent after explicit user authorization.
-  - Commit: pending authorization.
+  - Commit: `6076e18` (`chore: initialize AugloE2 foundation`).
+  - Delivery: local only; no remote, push, pull request, or GitHub resource.
 
 ## Checks policy
 
@@ -53,4 +54,4 @@ Create a clean, local, authoritative repository for milestone E2 without copying
 
 ## Current status
 
-T1–T3 are complete and verified. T4 is waiting for explicit authorization to create the initial commit. No commit or remote exists.
+T1–T4 are complete. The verified repository foundation is committed locally as `6076e18`; this record closes only repository governance and project control, not the technical architecture baseline. No remote exists.
