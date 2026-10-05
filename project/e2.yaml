@@ -1,6 +1,6 @@
 schema: auglo.e2.contract
 schema_version: 1
-contract_version: 0.1.0
+contract_version: 0.17.1
 milestone:
   id: E2
   state: foundation
@@ -10,23 +10,992 @@ milestone:
 closure_gate:
   state: open
   closes_when:
-    - 20 real outbound calls are complete under the cohort constraints
+    - the Primary Evaluation Cohort contains exactly 20 completed/evaluable real outbound conversations
+    - all 20 conversations use one arm and one Behavior Hash and were dialed serially
+    - every admitted Dialing Attempt is retained in the Operational Attempt Ledger with evidence and outcome
+    - every admitted Dialing Attempt's first valid founder-confirmed Outcome Label is within 48 hours of its Canonical Terminal Event
+    - every unsuccessful or incomplete attempt has initial Failure Attribution triage within 48 hours of its Canonical Terminal Event
+    - every unsuccessful or incomplete attempt has resolved Failure Attribution or an unresolved-attribution exception explicitly accepted by DR-5
+    - the founder has reviewed and confirmed the Outcome label for every admitted Dialing Attempt and the initial Failure Attribution triage for every unsuccessful or incomplete attempt
     - required evidence is accounted for by stable ID or hash
-    - every call is labeled within 48 hours
-    - every unsuccessful or incomplete call has failure attribution
-    - the DR-5 post-run decision is recorded in the Product Chronicle
+    - an immutable digest-identified Closure Candidate has passed the applicable contract checks and audit
+    - all hard E2 latency closure gates pass
+    - the call-duration hard guardrail passes with no connected conversation exceeding 300 elapsed seconds
+    - the exact Behavior Hash used by the Primary Evaluation Cohort has a passing Pre-Run Behavioral Readiness result for the selected suite version, covering all 20 canonical mandatory behaviors including the provider-neutral simulated appointment protocol, before the first admitted real Dialing Attempt
+    - exactly one winning stack, exact capability set, Config Snapshot, Behavior Hash, Adapter/model/voice identities, and suite version are selected and frozen before the first admitted real Dialing Attempt
+    - every conversation in the Primary Evaluation Cohort uses that one frozen winning stack without mixing bakeoff candidates
+    - when that exact Behavior Hash advertises real appointment booking, a live Adapter canary binding the cohort's exact Adapter and configuration has completed successfully with preserved evidence before the first admitted real Dialing Attempt
+    - the DR-5 post-run decision binds exactly one frozen Closure Candidate and is recorded in the Product Chronicle
+  latency_policy:
+    state: selected
+    role: hard E2 closure gates
+    reporting_only: false
+    all_thresholds_must_pass: true
+    provider_neutral: true
+    thresholds:
+      end_to_end_latency_p50:
+        maximum_milliseconds: 900
+      end_to_end_latency_p95:
+        maximum_milliseconds: 1800
+      end_of_turn_latency_p95:
+        maximum_milliseconds: 1200
+    provenance_warning:
+      legacy_role: aspirational E2 targets
+      legacy_threshold_enforcement_implemented: false
+      legacy_call_level_ledger_directly_exposed_aggregate_end_of_turn_p95: false
+    executable_measurement_contract:
+      state: resolved
+      clock: monotonic
+      measurement_population:
+        conversation_scope: exactly 20 evaluable conversations in the Primary Evaluation Cohort
+        sample_unit: metric-specific eligible turn
+        gate_population: all eligible measurements for the relevant metric pooled across the conversation scope
+        metric_eligibility:
+          end_of_turn:
+            eligible: every completed live-human speech turn after the Evaluation Entry Threshold
+          end_to_end:
+            eligible: every end-of-turn-eligible turn where the behavioral or policy contract required an audible agent response
+            required_response_failure_before_audio:
+              measurement: missing
+              gate_result: fail
+              silently_excluded: false
+        interruptions:
+          included_when_response_obligation_existed: true
+        eligibility_determination:
+          may_depend_on_observed_latency_value: false
+          may_depend_on_agent_audio_delivery_success: false
+      canonical_boundaries:
+        common_start: end of the last inbound audio sample classified as live-human speech
+        end_of_turn_end: canonical end-of-turn decision
+        end_to_end_end: first outbound agent audio sample delivered as audible output
+      aggregation:
+        percentile_method: nearest-rank
+        gate_control: pooled metric-specific eligible turns
+        per_conversation_distributions:
+          required_diagnostic_output: true
+          controls_gate: false
+        bias_note: Pooled turns weight longer conversations more heavily; required per-conversation reporting mitigates but does not eliminate this bias
+      measurement_validity:
+        required_missing_or_invalid_measurement: relevant gate fails
+        silently_excluded: false
+        imputed: false
+      end_to_end_exclusions:
+        set: closed
+        values:
+          - reason_code: remote_human_disconnected_before_response_delivery
+            condition: the remote human disconnected before the response could be delivered
+          - reason_code: policy_required_silence_or_termination
+            condition: an applicable policy required silence or termination rather than audible output
+        every_exclusion_requires:
+          - canonical reason code
+          - supporting evidence reference
+          - inclusion in closure reporting
+      next_focused_product_contract_decision: resolved in call_duration_policy
+    intentionally_unselected:
+      - runtime stack
+      - telemetry vendor
+      - implementation
+  call_duration_policy:
+    state: selected
+    role: hard E2 closure guardrail
+    provider_neutral: true
+    elapsed_time:
+      clock: monotonic
+      applies_to: live connected conversation
+      starts_at: connection establishment
+    graceful_closure:
+      begins_at_elapsed_seconds: 240
+      ends_before_elapsed_seconds: 300
+      required_behavior:
+        - pursue a natural close
+        - do not initiate new substantive work
+      in_flight_atomic_interaction:
+        may_finish_when_needed_to_close_safely: true
+        example: confirm already-collected appointment facts
+        may_expand_scope: false
+    forced_termination:
+      at_elapsed_seconds: 300
+      required: true
+      outcome:
+        auditable: true
+        label_required: true
+        failure_attribution_required_when_applicable: true
+    closure_guardrail:
+      maximum_elapsed_seconds: 300
+      violation_when_exceeded: true
+      violation_severity: hard
+      blocks_e2_closure: true
+    configuration:
+      graceful_closure_trigger_seconds: 240
+      semantic_class: behavior
+      frozen_in_config_snapshot: true
+      included_in_behavior_hash: true
+    required_evidence:
+      - timestamp or event proving connection establishment
+      - timestamp or event proving the 240-second graceful-closure transition
+      - events proving closure-window behavior and no new substantive work
+      - timestamp or event proving terminal cutoff and forced termination when reached
+      - Outcome and applicable Failure Attribution for forced termination
+    intentionally_unselected:
+      - provider
+      - runtime implementation
+    next_focused_product_contract_decision: resolved in pre_run_behavioral_readiness
+    legacy_offline_pass_rate:
+      threshold: 0.95
+      adopted: false
+      reason: an aggregate percentage cannot substitute for a failed mandatory scenario
+      authoritative_policy: closure_gate.pre_run_behavioral_readiness
+  pre_run_behavioral_readiness:
+    state: selected_with_initial_coverage_baseline
+    role: provider-neutral admission and E2 closure gate
+    provider_neutral: true
+    required_before: first admitted real Dialing Attempt
+    binds_exact_frozen_behavior_hash: true
+    suite:
+      name: Pre-Run Behavioral Readiness Suite
+      versioned: true
+      mandatory_scenario_policy:
+        every_mandatory_scenario_must_pass: true
+        aggregate_percentage_may_substitute_for_failure: false
+        zero_tolerance_coverage:
+          - legal behavior
+          - safety behavior
+          - evidence production
+          - 240–300-second graceful closure and forced termination
+          - provider-neutral simulated appointment protocol
+      diagnostic_scenario_policy:
+        may_fail_without_blocking_readiness: true
+        results_preserved: true
+        results_reported: true
+      scenario_contract:
+        every_scenario_requires:
+          - stable scenario ID and version
+          - declared behavior or contract covered
+          - deterministic inputs or controlled fixtures
+          - expected observable result
+          - evidence references
+          - pass/fail result
+      mandatory_conversational_behavior_coverage:
+        state: resolved_for_current_initial_baseline
+        baseline_role: initial versioned product baseline
+        final_agent_stack_or_capabilities_selected_by_this_baseline: false
+        canonical_behavior_count: 20
+        canonical_behaviors:
+          legal_safety_evidence:
+            - Legal Dial Eligibility
+            - Compliant Opening
+            - Truthful AI Identity
+            - Wrong Recipient Protection
+            - Immediate Durable DNC
+            - Emergency Safe Exit
+            - Grounded Claims
+            - Behavior Evidence Completeness
+          core_conversation:
+            - Voicemail or IVR Exit
+            - Single Language Recovery Then Exit
+            - Interruption Reorientation
+            - Conversation Memory and Correction
+            - Partial Capture Integrity
+            - Disinterest Without Pursuit
+            - Contextual Human Handoff
+          appointment_termination:
+            - Truthful Appointment Negotiation
+            - Verified Idempotent Appointment Commit
+            - Same-Turn Appointment Closure
+            - Bounded Session Termination
+            - No-Progress Termination
+        scenario_requirement:
+          minimum_mandatory_versioned_scenarios_per_behavior: 1
+          every_mandatory_scenario_must_pass: true
+          governed_by: closure_gate.pre_run_behavioral_readiness.suite.mandatory_scenario_policy
+        assertion_authority:
+          deterministic_assertions_own:
+            - tool calls
+            - state transitions
+            - provenance
+            - receipts
+            - clocks
+            - idempotency
+            - termination
+          model_or_human_judgment:
+            may_evaluate: semantic adequacy only
+            may_override_failed_deterministic_assertion: false
+        revision_policy:
+          before_real_cohort_stack_and_capability_freeze:
+            founder_may_explicitly_revise_inventory: true
+            append_only_versioned_revision_required: true
+            rationale_required: true
+            coverage_diff_required: true
+            silent_edits_forbidden: true
+          freeze_identity:
+            freezes_together:
+              - suite version
+              - Config Snapshot
+              - Behavior Hash
+              - real cohort stack
+              - real cohort capability set
+            behavior_affecting_coverage_or_configuration_change:
+              invalidates_readiness: true
+              requires_new_suite_version: true
+              requires_new_behavior_hash: true
+              requires_new_cohort_when_behavior_hash_contract_requires: true
+              requires_rerun_of_all_mandatory_scenarios: true
+        capability_coverage:
+          state: resolved_for_current_initial_baseline
+          revisable_before_freeze: true
+          stack_selected: false
+          provider_selected: false
+          runtime_selected: false
+        next_product_decision: define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+        identifier_namespace:
+          separate_from_augloe2_experiment_lifecycle_c1_c10: true
+          copy_legacy_identifiers_by_number: false
+      appointment_readiness:
+        simulation:
+          mandatory_regardless_of_selected_provider: true
+          provider_neutral: true
+          protocol_requires:
+            - open day negotiation
+            - availability query
+            - explicit day and time confirmation before write
+            - simulated appointment write bound to a stable idempotency key
+            - repeating the same logical booking request with the same idempotency key creates no duplicate appointment and returns or refers to the same authoritative appointment identity with a consistent result
+            - a different logical booking request uses a different idempotency key
+            - authoritative reread
+            - no booked claim when write or reread fails
+            - no booked claim when availability is unavailable
+            - truthful failure behavior
+            - same-turn goodbye and termination after verified success
+        live_adapter_canary:
+          required_when: the exact Behavior Hash for the real cohort advertises real appointment booking
+          required_when_real_booking_is_not_advertised: false
+          timing: must complete successfully before the first admitted real Dialing Attempt
+          binds:
+            - exact Adapter used by the cohort
+            - exact Adapter configuration used by the cohort
+          evidence_preserved: true
+          verifies:
+            - live appointment write bound to a stable idempotency key
+            - repeating the same logical booking request with the same idempotency key creates no duplicate appointment and returns or refers to the same authoritative appointment identity with a consistent result
+            - a different logical booking request uses a different idempotency key
+            - authoritative reread or propagation
+            - cleanup or designated test-record handling
+          operational_authorization:
+            separately_authorized_activity: true
+            may_create_or_alter_real_business_or_customer_records_without_explicit_authorization: false
+            designated_test_target_required: true
+        field_claim_policy:
+          when_real_booking_is_not_advertised:
+            live_calendar_or_provider_canary_required: false
+            agent_may_claim_booking_capability: false
+        provider_selected: false
+    readiness_result:
+      requires:
+        - suite version
+        - Behavior Hash
+        - timestamp
+        - runner identity and version
+        - evidence digest
+      pass_condition: every mandatory scenario passes
+      diagnostic_failures_block: false
+    invalidation:
+      after_suite_snapshot_hash_stack_and_capability_freeze:
+        behavior_affecting_coverage_or_configuration_change:
+          creates_new_suite_version: true
+          creates_new_behavior_hash: true
+          invalidates_readiness: true
+          requires_new_cohort_when_behavior_hash_contract_requires: true
+          requires_rerun_of_all_mandatory_scenarios: true
+    legacy_offline_pass_rate:
+      threshold: 0.95
+      adopted: false
+      reason: an aggregate percentage cannot substitute for a failed mandatory scenario
+    intentionally_unselected:
+      - provider
+      - runtime
+      - test framework
+    next_focused_product_contract_decision: Define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+  unresolved_attribution:
+    blocks_closure_by_default: true
+    exception_authority: DR-5
+    exception_requires:
+      - reference to the unresolved Failure Attribution
+      - reference to its supporting Attempt Evidence
+      - decision rationale
+      - accepted risk
+      - exception exposed in the closure report
+    acceptance_changes_attribution_to_resolved: false
+  closure_candidate:
+    state: resolved
+    created_before: closure review
+    immutable: true
+    digest_identified: true
+    binds:
+      - Primary Evaluation Cohort
+      - Operational Attempt Ledger
+      - Attempt Evidence Manifests
+      - current effective Outcome Labels
+      - current effective Failure Attributions
+      - unresolved-attribution exceptions
+      - contract-check results
+    post_freeze_material_change:
+      invalidates_candidate: true
+      requires:
+        - newly frozen Closure Candidate
+        - applicable contract checks
+        - applicable independent automated pre-closure audit
+      required_before: DR-5
+  dr_5_binding:
+    authority: founder
+    binds_exactly_one_frozen_closure_candidate: true
+    historical_closure_truth: as_of_bound_frozen_candidate
+  post_dr_5_amendments:
+    mechanism: append-only Closure Amendment
+    rewrites_historical_closure: false
+    rewrites_original_dr_5_decision: false
+    superseding_dr_5_required_when_affecting:
+      - experiment result
+      - Primary Evaluation Cohort membership
+      - Evidence Completeness
+      - unresolved-attribution exception
+      - any closure predicate
+    historical_closure_remains_true: as_of_original_frozen_candidate
 
-cohort:
-  call_count: 20
-  call_kind: real_outbound
+nfr_adoption:
+  state: complete
+  named_blockers_exhausted_by:
+    - hard latency closure gates
+    - call-duration hard guardrail
+    - Pre-Run Behavioral Readiness gate
+    - benchmark evidence retention and access contract
+  remaining_named_nfr_blockers: []
+
+first_stack_selection:
+  state: strategy_resolved_exact_candidates_and_winner_unresolved
+  optimization_target: E2 contract compliance and solo-founder operability, not globally optimal future architecture
+  baseline_entry_requirements:
+    regional_data_residency_required: false
+    preserved_contracts:
+      - consent
+      - access
+      - retention
+      - provider control
+  architecture_shape:
+    state: selected
+    style: provider-neutral modular monolith
+    runtime_shape: one process-level agent graph
+    interface_policy: small Interfaces at explicit Seams
+    interchangeable_adapter_roles:
+      - transport
+      - STT
+      - turn detection
+      - LLM
+      - TTS
+      - appointment
+      - evidence storage
+      - model-assisted review
+    selects_provider: false
+  pre_cohort_bakeoff:
+    bounded_candidate_count: 2
+    candidates:
+      - id: controlled_cascade
+        concept: explicit STT -> tool-capable reasoning -> deterministic pre-TTS policy/output control -> selected TTS
+        selects_provider_or_implementation: false
+      - id: audio_native_half_cascade
+        concept: audio-native understanding/reasoning producing controlled text/tool output -> deterministic pre-TTS policy/output control -> selected external/cloned TTS
+        selects_provider_or_implementation: false
+    adapter_deployment_dimension:
+      independent_of_candidate_identity: true
+      applies_to_both_candidates: true
+      decision_unit: each Adapter
+      allowed_modes:
+        - managed
+        - selectively self-hosted
+      selected_adapter_deployments: unresolved
+      self_hosted_adapters_selected: false
+    excluded_architectures:
+      pure_or_full_duplex_end_to_end_speech_to_speech:
+        official_candidate: false
+        requires_separate_qualification_for:
+          - exact compliant opening or required scripted speech
+          - deterministic pre-audio policy enforcement
+          - tool correctness and idempotency
+          - auditability and evidence
+          - voice rights and access
+          - interruption behavior
+          - the same Pre-Run Behavioral Readiness contract
+    shared_evaluation_contract:
+      - same versioned replay corpus
+      - same mandatory Pre-Run Behavioral Readiness Suite
+      - same canonical evidence requirements
+      - same controlled fixtures
+      - same authorized real-telephony smoke conditions when needed
+    evaluation_dimensions:
+      - accepted hard latency gates
+      - 20-behavior readiness results
+      - observable conversational quality
+      - evidence completeness
+      - failure behavior
+      - deterministic guardrail enforcement
+      - estimated cost
+      - solo-founder operational burden
+    candidate_changes:
+      phase: pre-cohort evaluation only
+      count_toward_primary_evaluation_cohort: false
+  cohort_freeze:
+    required_before: first admitted real Dialing Attempt
+    select_exactly_one_winner: true
+    freeze:
+      - winning stack
+      - exact capability set
+      - Config Snapshot
+      - Behavior Hash
+      - Adapter identities
+      - model identities
+      - voice identities
+      - suite version
+    candidate_mixing_within_primary_evaluation_cohort: forbidden
+  deferred_unless_required_for_candidate_to_pass_e2:
+    - production multi-tenancy
+    - broad on-prem deployment
+    - Kubernetes or autoscaling
+    - full self-hosting
+    - finetuning
+  provider_selection:
+    state: unresolved
+    selected_provider: none
+    current_provider_facts_usable_without_fresh_primary_source_research: false
+  next_focused_product_contract_decision: Define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+
+experiment_priority:
+  primary: conversational_agent_behavior
+  secondary: infrastructure_stability
+
+primary_evaluation_cohort:
+  conversation_count: 20
+  conversation_kind: completed_or_evaluable_real_outbound
   arms: 1
-  config_hashes: 1
+  behavior_hashes: 1
   dialing: serial
-  labeling_deadline_hours: 48
+  attempt_timing_contract: operational_attempt_ledger.timing_contract
+  evaluation_entry_threshold:
+    state: resolved
+    enters_irrevocably_when:
+      all_of:
+        - legal opening has been delivered
+        - first intelligible utterance has been captured from a live human
+    crosses:
+      - live intended-contact response
+      - live wrong-contact response
+    does_not_cross:
+      - voicemail
+      - IVR
+      - ambient noise
+      - silence or no answer
+      - unintelligible audio
+    required_proof: Attempt Evidence
+  retention_after_entry: required_despite_later_agent_or_infrastructure_failure
+
+benchmark_evidence_archive:
+  state: resolved
+  purpose: permanent internal benchmark for comparing future architecture and capability branches
+  benchmark_identity:
+    cohort: exactly 20 conversations from the E2 Primary Evaluation Cohort
+    comparison_basis:
+      - frozen Behavior Hash
+      - frozen benchmark evidence
+  raw_evidence:
+    includes:
+      - audio
+      - transcripts
+    indefinite_retention_and_reuse:
+      permitted_only_when_each_participant_has:
+        - explicit recorded consent
+        - consent specifically covering indefinite retention
+        - consent specifically covering reuse for internal architecture and capability evaluation
+    missing_specific_consent:
+      may_enter_permanent_raw_benchmark: false
+      ordinary_legal_and_evidence_handling: separate
+      fallback_retention_horizon_defined_by_this_contract: false
+    storage:
+      location: Controlled Storage outside Git
+      encrypted: true
+      git_and_canonical_manifest_representation:
+        - stable references
+        - hashes
+        - non-sensitive metadata
+  access:
+    authority: founder
+    policy:
+      least_privilege: true
+      purpose_bound: true
+      auditable: true
+    applies_to:
+      - human access
+      - service access
+      - model access
+    every_access_records:
+      - actor identity
+      - purpose
+      - evidence scope
+      - timestamp
+  external_model_or_provider_use:
+    requires:
+      - selected Adapter
+      - verified contractual controls preventing provider retention, training, or unrelated reuse
+      - verified technical controls preventing provider retention, training, or unrelated reuse
+    raw_evidence_may_be_sent_without_all_requirements: false
+  immutability:
+    future_architecture_branches_consume: immutable referenced copies or views
+    original_benchmark_evidence_may_be_altered: false
+    derived_artifacts_require:
+      - source evidence identity
+      - transformation
+      - tool, model, and version
+      - output hash
+  revocation_and_legal_requirements:
+    valid_participant_revocation_or_governing_legal_requirement:
+      action: delete or restrict affected raw evidence
+      attestation:
+        type: Evidence Retention Attestation
+        append_only: true
+    rewrites_historical_closure_candidate: false
+    rewrites_original_dr_5_truth_as_of_its_evidence: false
+    future_benchmark_availability_and_completeness_expose_change: true
+  non_sensitive_records:
+    preserved_indefinitely:
+      - hashes
+      - manifests
+      - labels
+      - decisions
+      - attestations
+    exception: governing law forbids preservation
+  pre_live_call_requirement:
+    applicable_legal_and_consent_language_must_be_validated: true
+    contract_claims_legal_sufficiency: false
+  intentionally_unselected:
+    - storage vendor
+    - encryption implementation
+    - IAM product
+    - model provider
+  next_product_decision: define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+
+operational_attempt_ledger:
+  includes_every_admitted_dialing_attempt: true
+  includes:
+    - evaluable conversations
+    - pre-conversation infrastructure failures
+    - no-answer attempts
+    - other non-evaluable attempts
+  required_accounting:
+    - evidence reference
+    - outcome
+    - Failure Attribution when applicable
+  non_evaluable_attempts:
+    count_toward_primary_denominator: false
+    reporting: separate
+    use: infrastructure_iteration
+  timing_contract:
+    state: resolved
+    deadline_anchor: each Dialing Attempt's Canonical Terminal Event
+    deadline_hours: 48
+    outcome_labeling:
+      applies_to: every admitted Dialing Attempt
+      requirement: valid founder-confirmed Outcome Label
+      deadline_evaluated_against: first valid founder-confirmed Outcome Label
+      later_correction:
+        cures_originally_late_label: false
+        makes_originally_timely_label_late: false
+      corrections:
+        mechanism: append-only Outcome Label Revision
+        linked_by: supersession
+        preserves_prior_labels: true
+        preserves_prior_evidence: true
+        sole_human_authority: founder
+    initial_failure_attribution_triage:
+      applies_to: every unsuccessful or incomplete Dialing Attempt
+      unresolved_when_evidence_is_insufficient: allowed
+      required_fields_when_unresolved:
+        - supporting Attempt Evidence references
+        - candidate causes
+        - investigation status
+        - reviewer or actor identity reference
+        - triage timestamp
+      timely_unresolved_satisfies_initial_triage_deadline: true
+      timely_unresolved_satisfies_final_attribution_for_closure: false
+    root_cause_resolution:
+      fixed_48_hour_sla: false
+      required_before_e2_closure_by_default: true
+      unresolved_exception_authority: DR-5
+
+e2_audit_operating_model:
+  state: resolved
+  operating_context:
+    current_human_team: one founder/operator
+    scaling_intent: models and automation
+  milestone_scope:
+    primary_evaluation_conversations: 20
+    human_review_sampling: all
+    reviewed_attempts:
+      - all 20 evaluable conversations
+      - every admitted non-evaluable Dialing Attempt
+  deterministic_pre_review:
+    runs_before_model_review: true
+    validates:
+      - deadlines
+      - event ordering
+      - evidence completeness
+      - Evaluation Entry Threshold proof
+      - contract consistency
+  model_assistance:
+    authority: non_authoritative_recommendation
+    permitted_actions:
+      - pre-label
+      - classify
+      - score confidence
+      - identify evidence
+      - propose Failure Attribution
+    ambiguous_causal_analysis:
+      reasoning_capable_llm_allowed: true
+    typed_pre_labeling:
+      structured_probabilistic_decision_model_pilot_allowed: true
+    adapter_selection: unresolved
+    interchangeable_adapters: true
+    nonbinding_examples:
+      - Jev
+      - LangSmith
+    candidate_adapter_classes:
+      - reasoning-capable language model
+      - structured probabilistic decision model
+    recommendation_record_requires:
+      - model or Adapter identity
+      - model or behavior version
+      - decision schema version
+      - probabilities or confidence when available
+      - supporting Attempt Evidence references
+      - generation timestamp
+    vendor_assertions_validated_as_project_facts: false
+  founder_review:
+    state: resolved
+    sole_human_review_authority: founder
+    confirms_every_admitted_dialing_attempt: true
+    initial_outcome_label_authority: founder
+    initial_failure_attribution_triage_authority: founder
+    sole_accountable_authority_for:
+      - corrections
+      - unresolved-cause exceptions
+      - DR-5
+  independent_automated_pre_closure_audit:
+    role: advisory
+    may_inspect_frozen_candidate: true
+    inspected_candidate_identity: Closure Candidate digest
+    checks:
+      - missing evidence
+      - contract inconsistencies
+    human_approver: false
+    may_authorize_dr_5: false
+  future_automation:
+    prerequisite: measure agreement against founder-confirmed E2 Outcome labels and Failure Attributions
+    production_threshold: unresolved
+
+selection_bias:
+  tradeoff: The primary denominator selects completed/evaluable conversations and therefore does not represent all admitted dialing attempts
+  mitigation: Complete Operational Attempt Ledger accounting preserves visibility into excluded attempts and their failure attribution
+  eliminated: false
+
+config_snapshot:
+  state: resolved
+  immutable: true
+  schema_versioned: true
+  provider_neutral: true
+  composition:
+    unit: typed Module configuration fragment
+    populated_by: future Adapters
+    value_state: resolved
+  field_semantic_classes:
+    - behavior
+    - provenance
+    - operational
+    - secret_reference
+  excludes:
+    - Attempt inputs
+    - observations
+  identities:
+    snapshot_digest:
+      covers: complete canonical snapshot
+      purpose:
+        - exact identity
+        - integrity
+    behavior_hash:
+      covers: versioned behavior-affecting projection
+      explicitly_includes:
+        - graceful-closure trigger at 240 elapsed seconds
+      purpose:
+        - experimental comparability
+        - cohort membership
+  evolution:
+    provenance_or_operational_metadata:
+      may_change_snapshot_digest: true
+      changes_behavior_hash: false
+    behavior_affecting_configuration:
+      changes_behavior_hash: true
+      requires_new_cohort: true
+    cross_schema_comparison:
+      reports:
+        - full
+        - partial
+        - incomparable
+      unknown_historical_behavior_values: never_invent
+  history:
+    snapshots_rewritten: false
+    proven_fact_addition:
+      mechanism: separate enrichment attestation
+      links_to:
+        - original Snapshot Digest
+        - evidence
+  unresolved:
+    - executable candidate qualification/bakeoff matrix
+    - exact provider-neutral pass/fail evidence for both architecture candidates
+    - per-Adapter managed versus selectively self-hosted deployment choices
+    - winning stack
+    - exact real-cohort capability set
+
+observability_portability:
+  state: resolved
+  canonical_contracts:
+    - configuration
+    - trace and event identity
+    - Attempt Evidence references
+    - outcomes
+    - correlation
+  provider_specific_trace_ids: Adapter mappings only
+  production_platform:
+    selection: unresolved
+    examples_are_nonbinding:
+      - LangSmith
+    role_if_selected: future Adapter
+    source_of_domain_truth: false
+  sensitive_evidence:
+    authority: Controlled Storage
+    observability_adapter_may_become_authority_implicitly: false
+  canonical_event_and_evidence_contract:
+    state: resolved
+    architecture:
+      canonical_lifecycle_evidence: required
+      detailed_traces: optional Adapter extensions
+      canonical_interpretation_requires_detailed_traces: false
+    per_admitted_attempt:
+      owns:
+        - one append-only Canonical Event Stream
+        - one Attempt Evidence Manifest
+    canonical_event_stream:
+      provider_neutral: true
+      stable_domain_contract: true
+      append_only: true
+      envelope:
+        required:
+          - internal event ID
+          - internal attempt ID
+          - schema version
+          - ordered sequence
+          - occurred-at time
+          - event type
+          - non-sensitive payload or stable payload reference/hash
+        when_applicable:
+          - correlation reference
+          - causation reference
+        provider_trace_ids: Adapter mappings only
+      lifecycle_and_behavior_events:
+        - attempt admitted and configuration bound with Snapshot Digest and Behavior Hash
+        - dialing requested
+        - provider outcome recorded
+        - connection established when applicable
+        - graceful-closure window entered at 240 elapsed seconds when applicable
+        - closure-window behavior sufficient to prove no new substantive work was initiated
+        - forced termination at 300 elapsed seconds when applicable
+        - legal opening delivered when applicable
+        - first intelligible live-human utterance captured when applicable
+        - Evaluation Entry Threshold crossed when applicable
+        - observable user and agent turns sufficient to reconstruct conversational behavior without token-level internals
+        - tool invocation with sanitized result/provenance references when applicable
+        - guardrail or policy decision when it changes observable behavior
+        - Canonical Terminal Event recording the terminal outcome exactly once
+        - evidence finalized with completeness verdict
+    attempt_evidence_manifest:
+      binds:
+        - internal attempt ID
+        - Snapshot Digest
+        - Behavior Hash
+        - Canonical Event Stream identity
+        - artifact references and hashes
+        - outcome
+        - Evaluation Entry Threshold proof
+        - call-duration evidence proving the 240-second transition, closure-window behavior, and terminal cutoff or termination when applicable
+        - first valid founder-confirmed Outcome Label and labeling timestamp
+        - complete Outcome Label revision chain when corrections exist
+        - initial Failure Attribution triage and triage timestamp when unsuccessful or incomplete
+        - Failure Attribution when applicable
+        - optional Detailed Trace references
+        - Evidence Completeness verdict
+      contains_sensitive_payloads: false
+    evidence_completeness:
+      values:
+        - complete
+        - incomplete
+      path_sensitive: true
+      required_events_and_artifacts_depend_on_observed_path: true
+      examples:
+        no_answer_requires_conversation_turns: false
+        threshold_crossing_requires_threshold_and_conversation_evidence: true
+      incomplete_verdict:
+        names_missing_or_invalid_requirements: true
+        remains_visible_in_operational_attempt_ledger: true
+        may_be_reported_as_successful_or_complete: false
+    capture_failure:
+      preserve_strongest_possible_ledger_record: true
+      preserve_failure_attribution_when_possible: true
+      complete_manifest_assumed_possible_on_every_path: false
+    controlled_storage:
+      contains:
+        - audio
+        - transcripts
+        - sensitive payloads
+        - provider-native traces
+      git_and_canonical_manifests_contain:
+        - stable IDs and hashes
+        - non-sensitive metadata
+    intentionally_unselected:
+      - observability provider
+      - storage implementation
+      - serialization technology
+      - exact stack
+    next_product_decision: define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+
+failure_attribution:
+  state: resolved
+  relationship_to_outcome:
+    outcome_records: what happened
+    attribution_records: where and why an unsuccessful or incomplete attempt failed
+    separate_records: true
+  model:
+    provider_neutral: true
+    hierarchical: true
+    multi_axis: true
+    applies_to: unsuccessful or incomplete attempts
+    resolved:
+      primary_attributions: exactly_one
+      contributing_factors: zero_or_more
+    provisional_unresolved:
+      primary_attributions: none
+      best_fit_cause_for_metrics_forbidden: true
+      preserves:
+        - supporting Attempt Evidence references
+        - candidate causes
+        - investigation status
+        - reviewer or actor identity reference
+        - triage timestamp
+  attribution_fields:
+    required:
+      - lifecycle stage
+      - causal category
+      - responsibility
+      - retryability/remediation class
+      - confidence
+      - supporting Attempt Evidence references
+  lifecycle_stages:
+    semantics: provider-neutral
+    values:
+      - admission
+      - configuration
+      - dialing
+      - transport/media
+      - speech input
+      - turn management
+      - reasoning
+      - tool execution
+      - policy/guardrail
+      - speech output
+      - evidence capture
+      - labeling
+      - experiment closure
+    legacy_six_value_ui_enum_is_canonical: false
+  causal_category_families:
+    stability: stable
+    implementation_selection: deferred
+    values:
+      - unavailable dependency
+      - timeout
+      - invalid input
+      - invalid configuration
+      - contract violation
+      - incorrect behavior
+      - policy rejection
+      - unavailable business data
+      - evidence missing/invalid
+      - human/environmental condition
+      - unresolved pending investigation
+  responsibility_values:
+    - conversational agent
+    - infrastructure
+    - external provider
+    - experiment operation
+    - human/environment
+    - shared
+    - unresolved
+  retryability_remediation_values:
+    - retry as a new attempt without behavior change
+    - operational intervention required
+    - behavior/configuration change requiring a new Behavior Hash/cohort
+    - non-retryable
+    - unresolved
+  confidence_values:
+    - confirmed
+    - supported
+    - suspected
+    - unknown
+  confidence_evidence_policy:
+    confirmed_requires_supporting_evidence: true
+    supported_requires_supporting_evidence: true
+  unresolved_cause_policy:
+    provisional_record_allowed: true
+    timely_initial_triage_satisfies_48_hour_triage_requirement: true
+    root_cause_resolution_has_fixed_48_hour_sla: false
+    satisfies_final_attribution_for_closure_by_default: false
+    closure_exception:
+      authority: DR-5
+      requirements:
+        - reference the unresolved attribution and supporting Attempt Evidence
+        - state the decision rationale and accepted risk
+        - expose the exception in the closure report
+      rewrites_attribution_as_resolved: false
+  corrections:
+    attribution_revisions:
+      append_only: true
+      linked_by: supersession
+      historical_evidence_rewritten: false
+    outcome_label_revisions:
+      state: resolved
+      append_only: true
+      linked_by: supersession
+      prior_labels_and_evidence_preserved: true
+      accountable_correction_authority: founder
+      deadline_effect:
+        evaluated_against: first valid founder-confirmed Outcome Label
+        later_revision_cures_originally_late_label: false
+        later_revision_makes_originally_timely_label_late: false
+    closure_freeze_and_amendments:
+      state: resolved
+      contract: closure_gate.closure_candidate
+      post_dr_5_contract: closure_gate.post_dr_5_amendments
+  intentionally_unselected:
+    - vendor
+    - runtime stack
+    - storage
+    - serialization
 
 capabilities:
   C1:
-    name: cohort_admission
+    name: primary_evaluation_cohort_admission
     state: not_implemented
   C2:
     name: config_snapshot_freeze
@@ -35,7 +1004,7 @@ capabilities:
     name: serial_dialing
     state: not_implemented
   C4:
-    name: outbound_call_execution
+    name: outbound_conversation_execution
     state: not_implemented
   C5:
     name: speech_interaction
@@ -44,7 +1013,7 @@ capabilities:
     name: executable_appointment
     state: not_implemented
   C7:
-    name: call_evidence_capture
+    name: attempt_evidence_capture
     state: not_implemented
   C8:
     name: outcome_labeling
@@ -58,10 +1027,13 @@ capabilities:
 
 scope:
   includes:
-    - one controlled E2 cohort
-    - outbound calls and speech interaction
+    - one controlled Primary Evaluation Cohort
+    - an Operational Attempt Ledger for every admitted Dialing Attempt
+    - outbound conversations and speech interaction
     - executable appointment outcomes
     - evidence accounting, labeling, and failure attribution
+    - separate reporting of non-evaluable attempts for infrastructure iteration
+    - a permanent consent-qualified Benchmark Evidence Archive for future internal comparisons
     - DR-5 post-run decision
   excludes:
     - CRM or DMS integration
@@ -73,24 +1045,47 @@ scope:
 
 evidence:
   required:
-    - cohort manifest reference
-    - Config Hash
-    - per-call Call Evidence reference
-    - per-call outcome label and labeling timestamp
+    - Primary Evaluation Cohort manifest reference
+    - Operational Attempt Ledger reference
+    - Snapshot Digest
+    - Behavior Hash
+    - per-attempt Attempt Evidence reference
+    - per-attempt outcome
+    - per-attempt valid Outcome label and labeling timestamp
+    - founder review confirmation for every admitted Dialing Attempt
+    - initial Failure Attribution triage and triage timestamp when unsuccessful or incomplete
+    - founder review confirmation of initial Failure Attribution triage when applicable
+    - model recommendation provenance and evidence references when model assistance is used
     - Failure Attribution when applicable
+    - frozen Closure Candidate digest and bound records
+    - Closure Amendment references when applicable
+    - superseding DR-5 Product Chronicle event reference when an amendment requires it
     - DR-5 Product Chronicle event reference
+    - call-duration timestamps and events proving the 240-second transition, closure-window behavior, and terminal cutoff or termination when applicable
+    - passing Pre-Run Behavioral Readiness result binding the suite version, exact Behavior Hash, timestamp, runner identity/version, and evidence digest
+    - preserved mandatory provider-neutral simulated appointment protocol evidence covering negotiation, availability, confirmation, a stable idempotency key bound to the simulated write, same-request replay without duplication and with the same authoritative appointment identity and consistent result, distinct keys for different logical booking requests, authoritative reread, truthful failure behavior, and verified-success termination
+    - when real appointment booking is advertised, preserved live Adapter canary evidence binding the cohort's exact Adapter/configuration and proving the same write-bound idempotency, replay, distinct-request key, authoritative reread/propagation, and cleanup or designated test-record handling contract
+    - preserved mandatory and diagnostic readiness scenario results with stable scenario IDs/versions and evidence references
+    - Benchmark Evidence Archive references, hashes, non-sensitive metadata, and current availability/completeness
+    - Evidence Retention Attestations when raw evidence is deleted or restricted
   git_representation: stable_id_or_hash_only
-  sensitive_material_location: Controlled Storage outside Git
+  sensitive_material_location: encrypted Controlled Storage outside Git
 
 provenance:
-  augloai_commit:
-    status: unresolved
-    value: null
-    required_before: runtime_extraction
+  legacy_source_slice:
+    repository: 00-orchestrator
+    branch: rework/local-rework-v1
+    commit: e8251ded0e6aa700f6c59c39c2fc3fcf4a720e20
+    path: local-rework-v1/
+  aggregate_augloai_container_commit:
+    exists: false
+    reason: AugloAI is a container of independent repositories
 
 current_gaps:
   - No runtime has been extracted or implemented
-  - AugloAI source commit provenance is unresolved
-  - Config Snapshot and evidence schemas are not yet defined
-  - Capability acceptance criteria are not yet specified
-  - Controlled Storage adapters and access policy are not yet selected
+  - Operational Attempt Ledger and executable evidence serialization schemas are not yet defined
+  - Capability coverage is resolved for the current initial readiness baseline but remains explicitly revisable before the real cohort stack and capability freeze
+  - The first-stack selection strategy, provider-neutral modular-monolith shape, and two architecture candidate identities are resolved, but the executable qualification matrix, exact provider-neutral pass/fail evidence, winning stack, provider, runtime, per-Adapter deployment choices, and exact real-cohort capability set are not selected
+  - The next focused product decision is the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+  - Current provider facts require fresh primary-source research before any provider selection
+  - Controlled Storage adapters are intentionally unselected
