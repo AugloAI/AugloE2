@@ -61,13 +61,13 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
   - GREEN observed and independently verified: the exact runner passed one public-seam test; candidate identity mismatch is rejected before candidate execution.
   - Checks: Python 3.12-compatible syntax inspected; Python 3.14 execution passed; standard-library-only; no provider or later-task behavior added.
   - Commit evidence: `aae62726cb3dd14ce6c365ba98edeb21919f5c1a` (`feat(bakeoff): establish candidate evaluation harness`).
-- [ ] T2 — Implement the evidence contract tracer.
-  - Route: delegated writer.
-  - RED: reject out-of-order events, missing terminal event, duplicate terminal event, or invalid finalization.
-  - GREEN: append-only `EvidenceRecorder` produces deterministic stream and manifest digests plus a path-sensitive completeness verdict.
-  - TRIANGULATE: valid minimum duration stream and expected incomplete capture-failure record.
-  - Checks: focused unit tests plus full runner.
-  - Commit evidence: pending.
+- [x] T2 — Implement the evidence contract tracer.
+  - Route: delegated writer with two independent verification-driven correction rounds.
+  - RED/GREEN evidence: multiple observed cycles covered import absence, ordering, envelope validation, terminal cardinality, deterministic digests, completeness, attempt/event identity, repeated finalization, path-derived requirements, and recursive payload protection.
+  - TRIANGULATE: valid duration evidence, no-answer versus threshold-crossed paths, explicit incomplete capture failure, empty identities, and arbitrary nested payload containers.
+  - Checks: the exact full runner passed 14 tests; final independent verification passed with no material T2 gap.
+  - Review-size exception: founder explicitly accepted one cohesive 521-line T2 work unit; the exception does not apply to later tasks.
+  - Commit evidence: `259fa97c953ed553ffc28c2e0b21f21fc256b6e0` (`feat(bakeoff): add canonical evidence recorder`).
 - [ ] T3 — Implement deterministic duration control and candidate parity.
   - Route: delegated writer.
   - RED: reject new substantive work at exactly 240 seconds and fail an execution whose real media/connection end exceeds 300 seconds.
@@ -96,10 +96,10 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
   1. harness plus evidence tracer;
   2. duration control plus candidate parity;
   3. qualification/reporting plus final documentation.
-- Founder-selected delivery: three work-unit commits or PR slices using the recommended boundaries above.
+- Founder-selected delivery began with three work-unit boundaries; T2 received an explicit one-task size exception at 521 lines after implementation, while later tasks remain subject to the 400-line budget.
 - Never compress or omit tests, evidence, or documentation to fit the budget.
 - Push, pull request creation, merge, provider account activity, and real telephony remain unauthorized.
 
 ## Current status
 
-T1 is complete in commit `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`: the Python standard-library harness exists, strict RED/GREEN evidence was observed, and an independent verifier passed the exact runner. T2 is next: implement the append-only evidence contract tracer through the confirmed `EvidenceRecorder` seam.
+T1 is complete in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`. T2 is complete in `259fa97c953ed553ffc28c2e0b21f21fc256b6e0` with 14 passing tests and final independent verification after closing three material gaps. T3 is next: deterministic 240/300-second control and parity across both fake candidate Adapters. The T2 size exception is not reusable.
