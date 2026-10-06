@@ -1,0 +1,6 @@
+[project]
+name = "auglo-e2-bakeoff"
+version = "0.0.0"
+description = "Offline provider-neutral qualification harness for the Auglo E2 bakeoff"
+requires-python = ">=3.12"
+dependencies = []
