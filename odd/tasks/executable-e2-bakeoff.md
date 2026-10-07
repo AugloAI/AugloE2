@@ -68,13 +68,12 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
   - Checks: the exact full runner passed 14 tests; final independent verification passed with no material T2 gap.
   - Review-size exception: founder explicitly accepted one cohesive 521-line T2 work unit; the exception does not apply to later tasks.
   - Commit evidence: `259fa97c953ed553ffc28c2e0b21f21fc256b6e0` (`feat(bakeoff): add canonical evidence recorder`).
-- [ ] T3 — Implement deterministic duration control and candidate parity.
-  - Route: delegated writer.
-  - RED: reject new substantive work at exactly 240 seconds and fail an execution whose real media/connection end exceeds 300 seconds.
-  - GREEN: fake monotonic clock and shared `PreTtsControl` produce graceful closure and forced termination behavior through both fake candidate Adapters.
-  - TRIANGULATE: immediately before, exactly at, and immediately after both boundaries; mismatched fixture/config/evaluator digests.
-  - Checks: focused boundary tests plus full runner.
-  - Commit evidence: pending.
+- [x] T3 — Implement deterministic duration control and candidate parity.
+  - Route: delegated writer plus independent verifier; one failed verifier launch was retried without accepting missing evidence.
+  - RED/GREEN evidence: observed cycles covered missing control/candidate Interfaces, negative elapsed time, and parity mismatch handling.
+  - TRIANGULATE: immediately before, exactly at, and immediately after 240 and 300 seconds; actual end at 300 versus 300.001; both candidate identities; and independent fixture/configuration/evaluator mismatches.
+  - Checks: exact full runner passed 20 tests; independent verification passed; 340 changed lines remained below the 400-line budget.
+  - Commit evidence: `23450a8b4771668303bce1844b52c137595e80ea` (`feat(bakeoff): enforce duration control parity`).
 - [ ] T4 — Implement gate-first qualification and comparison output.
   - Route: delegated writer.
   - RED: a failed mandatory assertion or incomplete evidence must never receive an admitted or winning result.
@@ -102,4 +101,4 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
 
 ## Current status
 
-T1 is complete in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`. T2 is complete in `259fa97c953ed553ffc28c2e0b21f21fc256b6e0` with 14 passing tests and final independent verification after closing three material gaps. T3 is next: deterministic 240/300-second control and parity across both fake candidate Adapters. The T2 size exception is not reusable.
+T1 is complete in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`. T2 is complete in `259fa97c953ed553ffc28c2e0b21f21fc256b6e0` with its explicit one-task size exception. T3 is complete in `23450a8b4771668303bce1844b52c137595e80ea`: all 20 tests and independent verification passed within the ordinary 400-line budget. T4 is next: gate-first qualification and comparison output without winner selection.
