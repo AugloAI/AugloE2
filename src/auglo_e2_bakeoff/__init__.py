@@ -1,5 +1,7 @@
 """Public interface for the offline E2 candidate qualification harness."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
@@ -8,10 +10,26 @@ import json
 
 
 @dataclass(frozen=True, slots=True)
+class CheckOutcome:
+    """Named deterministic assertion or diagnostic outcome."""
+
+    name: str
+    passed: bool
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
 class QualificationInput:
-    """Qualification input bound to exactly one candidate identity."""
+    """Provider-neutral inputs for one candidate qualification."""
 
     candidate_id: str
+    execution_context: ExecutionContext | None = None
+    inbound_stream: tuple[ProposedAction, ...] = ()
+    ports: ExecutionPorts | None = None
+    evidence_ref: ManifestRef | None = None
+    mandatory_assertions: tuple[CheckOutcome, ...] = ()
+    diagnostic_outcomes: tuple[CheckOutcome, ...] = ()
+    comparison_dimensions: ComparisonDimensions | None = None
 
 
 class CandidateIdentityMismatch(ValueError):
@@ -289,6 +307,44 @@ class TerminalResult:
     evidence_intents: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class ComparisonDimension:
+    """One explicitly measured or not-measured comparison dimension."""
+
+    status: str
+    value: float | None
+
+    @classmethod
+    def measured(cls, value: float) -> ComparisonDimension:
+        return cls("measured", value)
+
+    @classmethod
+    def not_measured(cls) -> ComparisonDimension:
+        return cls("not_measured", None)
+
+
+@dataclass(frozen=True, slots=True)
+class ComparisonDimensions:
+    """Separate comparison values that never decide candidate admission."""
+
+    semantic_quality: ComparisonDimension
+    estimated_cost: ComparisonDimension
+    solo_founder_operability: ComparisonDimension
+
+
+@dataclass(frozen=True, slots=True)
+class QualificationResult:
+    """Immutable gate-first result for one candidate, without ranking."""
+
+    candidate_id: str
+    outcome: str
+    gate_outcomes: tuple[CheckOutcome, ...]
+    diagnostic_outcomes: tuple[CheckOutcome, ...]
+    terminal_result: TerminalResult
+    evidence_ref: ManifestRef
+    comparison_dimensions: ComparisonDimensions
+
+
 class _FakeConversationCandidate:
     def __init__(self, identities: ParityIdentities) -> None:
         self._identities = identities
@@ -348,13 +404,13 @@ class AudioNativeHalfCascadeCandidate(_FakeConversationCandidate):
 
 
 class CandidateEvaluator:
-    """Validate qualification input before candidate execution."""
+    """Execute one candidate and apply admission gates before comparison."""
 
     def evaluate(
         self,
         candidate: object,
         qualification_input: QualificationInput,
-    ) -> None:
+    ) -> QualificationResult:
         candidate_id = getattr(candidate, "candidate_id", None)
         if candidate_id != qualification_input.candidate_id:
             raise CandidateIdentityMismatch(
@@ -363,13 +419,50 @@ class CandidateEvaluator:
                 f"candidate identity {candidate_id!r}"
             )
 
-        raise NotImplementedError("candidate execution is not implemented in T1")
+        context = qualification_input.execution_context
+        ports = qualification_input.ports
+        evidence_ref = qualification_input.evidence_ref
+        dimensions = qualification_input.comparison_dimensions
+        if context is None or ports is None or evidence_ref is None or dimensions is None:
+            raise ValueError("qualification input is incomplete")
+
+        terminal_result = candidate.execute(
+            context, qualification_input.inbound_stream, ports
+        )
+        evidence_reason = evidence_ref.evidence_completeness
+        if evidence_ref.missing_requirements:
+            evidence_reason += ": " + ", ".join(evidence_ref.missing_requirements)
+        gate_outcomes = qualification_input.mandatory_assertions + (
+            CheckOutcome(
+                "duration_compliance",
+                terminal_result.duration_compliant,
+                terminal_result.outcome,
+            ),
+            CheckOutcome(
+                "evidence_completeness",
+                evidence_ref.evidence_completeness == "complete",
+                evidence_reason,
+            ),
+        )
+        outcome = "admitted" if all(gate.passed for gate in gate_outcomes) else "ineligible"
+        return QualificationResult(
+            candidate_id=candidate_id,
+            outcome=outcome,
+            gate_outcomes=gate_outcomes,
+            diagnostic_outcomes=qualification_input.diagnostic_outcomes,
+            terminal_result=terminal_result,
+            evidence_ref=evidence_ref,
+            comparison_dimensions=dimensions,
+        )
 
 
 __all__ = [
     "AudioNativeHalfCascadeCandidate",
     "CandidateEvaluator",
     "CandidateIdentityMismatch",
+    "CheckOutcome",
+    "ComparisonDimension",
+    "ComparisonDimensions",
     "ControlledAction",
     "ControlledCascadeCandidate",
     "EvidenceRecorder",
@@ -382,5 +475,6 @@ __all__ = [
     "PreTtsControl",
     "ProposedAction",
     "QualificationInput",
+    "QualificationResult",
     "TerminalResult",
 ]
