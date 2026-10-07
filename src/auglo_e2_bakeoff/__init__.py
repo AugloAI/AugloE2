@@ -198,6 +198,155 @@ class EvidenceRecorder:
         return manifest
 
 
+@dataclass(frozen=True, slots=True)
+class ProposedAction:
+    """Provider-neutral action proposed before audible output."""
+
+    intent: str
+    substantive: bool
+
+
+@dataclass(frozen=True, slots=True)
+class PolicyState:
+    """Duration policy state anchored to connection establishment."""
+
+    connection_started_at: float
+
+
+@dataclass(frozen=True, slots=True)
+class ControlledAction:
+    """Deterministic pre-TTS disposition and its evidence intent."""
+
+    disposition: str
+    evidence_intent: str
+    substantive_work_allowed: bool
+    elapsed_seconds: float
+
+
+class PreTtsControl:
+    """Apply the shared duration policy before candidate output."""
+
+    def evaluate(
+        self,
+        proposed_action: ProposedAction,
+        policy_state: PolicyState,
+        clock: object,
+    ) -> ControlledAction:
+        elapsed = float(clock.monotonic()) - policy_state.connection_started_at
+        if elapsed < 0.0:
+            raise ValueError("elapsed seconds cannot be negative")
+        if elapsed >= 300.0:
+            return ControlledAction(
+                "force_termination", "forced_termination", False, elapsed
+            )
+        if elapsed >= 240.0 and proposed_action.substantive:
+            return ControlledAction(
+                "pursue_graceful_closure", "graceful_closure", False, elapsed
+            )
+        return ControlledAction("allow", "action_allowed", True, elapsed)
+
+
+class ParityIdentityMismatch(ValueError):
+    """Raised when a candidate is not bound to the shared parity identities."""
+
+
+@dataclass(frozen=True, slots=True)
+class ParityIdentities:
+    """Immutable fixture, configuration, and evaluator identities."""
+
+    fixture_digest: str
+    configuration_digest: str
+    evaluator_digest: str
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionContext:
+    """Provider-neutral inputs for the bounded-duration fixture."""
+
+    identities: ParityIdentities
+    connection_started_at: float
+    transport_acknowledged_elapsed_seconds: float
+    actual_end_elapsed_seconds: float
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionPorts:
+    """Shared control and deterministic clock used by a candidate Adapter."""
+
+    pre_tts_control: PreTtsControl
+    clock: object
+
+
+@dataclass(frozen=True, slots=True)
+class TerminalResult:
+    """Comparable provider-neutral terminal duration result."""
+
+    outcome: str
+    duration_compliant: bool
+    termination_request_elapsed_seconds: float
+    transport_acknowledged_elapsed_seconds: float
+    actual_end_elapsed_seconds: float
+    evidence_intents: tuple[str, ...]
+
+
+class _FakeConversationCandidate:
+    def __init__(self, identities: ParityIdentities) -> None:
+        self._identities = identities
+
+    def execute(
+        self,
+        execution_context: ExecutionContext,
+        inbound_stream: tuple[ProposedAction, ...],
+        ports: ExecutionPorts,
+    ) -> TerminalResult:
+        if execution_context.identities != self._identities:
+            raise ParityIdentityMismatch(
+                "fixture, configuration, and evaluator identities must match"
+            )
+
+        policy_state = PolicyState(execution_context.connection_started_at)
+        evidence_intents: list[str] = []
+        termination_request: float | None = None
+        for proposed_action in inbound_stream:
+            controlled = ports.pre_tts_control.evaluate(
+                proposed_action, policy_state, ports.clock
+            )
+            evidence_intents.append(controlled.evidence_intent)
+            if controlled.disposition == "force_termination":
+                termination_request = controlled.elapsed_seconds
+                evidence_intents.append("termination_requested")
+                break
+        if termination_request is None:
+            raise ValueError("fixture did not observe forced termination")
+
+        evidence_intents.extend(("transport_acknowledged", "connection_ended"))
+        compliant = execution_context.actual_end_elapsed_seconds <= 300.0
+        outcome = "duration_compliant" if compliant else "hard_duration_violation"
+        evidence_intents.append(outcome)
+        return TerminalResult(
+            outcome=outcome,
+            duration_compliant=compliant,
+            termination_request_elapsed_seconds=termination_request,
+            transport_acknowledged_elapsed_seconds=(
+                execution_context.transport_acknowledged_elapsed_seconds
+            ),
+            actual_end_elapsed_seconds=execution_context.actual_end_elapsed_seconds,
+            evidence_intents=tuple(evidence_intents),
+        )
+
+
+class ControlledCascadeCandidate(_FakeConversationCandidate):
+    """Deterministic fake Adapter for the controlled cascade candidate."""
+
+    candidate_id = "controlled_cascade"
+
+
+class AudioNativeHalfCascadeCandidate(_FakeConversationCandidate):
+    """Deterministic fake Adapter for the audio-native half-cascade candidate."""
+
+    candidate_id = "audio_native_half_cascade"
+
+
 class CandidateEvaluator:
     """Validate qualification input before candidate execution."""
 
@@ -218,9 +367,20 @@ class CandidateEvaluator:
 
 
 __all__ = [
+    "AudioNativeHalfCascadeCandidate",
     "CandidateEvaluator",
-    "EvidenceRecorder",
-    "ManifestRef",
     "CandidateIdentityMismatch",
+    "ControlledAction",
+    "ControlledCascadeCandidate",
+    "EvidenceRecorder",
+    "ExecutionContext",
+    "ExecutionPorts",
+    "ManifestRef",
+    "ParityIdentities",
+    "ParityIdentityMismatch",
+    "PolicyState",
+    "PreTtsControl",
+    "ProposedAction",
     "QualificationInput",
+    "TerminalResult",
 ]
