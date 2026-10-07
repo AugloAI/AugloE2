@@ -80,11 +80,14 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
   - TRIANGULATE: both candidates admitted independently, mandatory assertion/duration/evidence failures despite maximum scores, diagnostic-only failure, missing dimension, immutability, and identity preflight.
   - Checks: exact full runner passed 24 tests; independent verification found no material gap; 287 changed lines remained below budget.
   - Commit evidence: `0215f358ba08728304ba4492ef0f43c2a5a3c07a` (`feat(bakeoff): enforce gate-first qualification`).
-- [ ] T5 — Verify the slice and align documentation.
-  - Route: delegated independent verifier, followed by bounded documentation correction only if needed.
-  - Checks: exact full test command, deterministic repeated run, canonical vocabulary, security exclusions, no synthetic overclaim, no provider selection, and diff review.
-  - Runtime harness: execute the same frozen scenario through both fake candidates and inspect the emitted qualification/comparison result.
-  - Commit evidence: pending.
+- [x] T5 — Verify the slice and align documentation.
+  - Route: delegated independent verifier, bounded writer, and final independent verifier.
+  - Checks: the exact suite passed twice with 32 tests; the executable runner passed twice with byte-identical canonical JSON; final verification passed with no material gap.
+  - Runtime harness: `PYTHONPATH=src python3 -m auglo_e2_bakeoff` runs the frozen `Bounded Session Termination` fixture through both fake candidates, emits complete execution-owned evidence, derived gates, qualification digests, explicit not-measured dimensions, and no winner selection.
+  - Security and integrity: duration requirements are evaluator-owned and unconditional; actual end time derives compliance/outcome; manifests bind candidate and terminal data; qualification digest binds the full qualification basis; recursive sensitive/provider key filtering remains enforced.
+  - Documentation: `README.md` and `project/e2.yaml` distinguish the bounded offline harness from production runtime, provider choice, real telephony, full readiness, and real-cohort latency. Contract version is `0.17.4`.
+  - Review-size exception: founder explicitly accepted this cohesive T5 work unit at 734 changed lines after final blockers were found. This exception is not reusable.
+  - Commit evidence: `22fbde4fb03621fba231a7f4ab735044f13c5349` (`feat(bakeoff): add deterministic qualification runner`).
 
 ## Delivery forecast
 
@@ -100,4 +103,4 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
 
 ## Current status
 
-T1–T4 are implemented in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`, `259fa97c953ed553ffc28c2e0b21f21fc256b6e0`, `23450a8b4771668303bce1844b52c137595e80ea`, and `0215f358ba08728304ba4492ef0f43c2a5a3c07a`. The exact full suite passes 24 tests. T5 is next: independently verify the complete slice, run the offline harness repeatedly, align documentation and canonical contract wording where necessary, and prepare final review evidence.
+T1–T5 are complete in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`, `259fa97c953ed553ffc28c2e0b21f21fc256b6e0`, `23450a8b4771668303bce1844b52c137595e80ea`, `0215f358ba08728304ba4492ef0f43c2a5a3c07a`, and `22fbde4fb03621fba231a7f4ab735044f13c5349`. The full suite passes 32 tests and the offline runner produces byte-identical 3,459-byte JSON across repeated runs. The bounded slice is complete; it remains explicitly non-production and does not select a provider or winner.
