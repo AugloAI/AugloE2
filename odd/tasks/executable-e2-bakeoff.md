@@ -74,13 +74,12 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
   - TRIANGULATE: immediately before, exactly at, and immediately after 240 and 300 seconds; actual end at 300 versus 300.001; both candidate identities; and independent fixture/configuration/evaluator mismatches.
   - Checks: exact full runner passed 20 tests; independent verification passed; 340 changed lines remained below the 400-line budget.
   - Commit evidence: `23450a8b4771668303bce1844b52c137595e80ea` (`feat(bakeoff): enforce duration control parity`).
-- [ ] T4 — Implement gate-first qualification and comparison output.
-  - Route: delegated writer.
-  - RED: a failed mandatory assertion or incomplete evidence must never receive an admitted or winning result.
-  - GREEN: `CandidateEvaluator` emits separate admission outcomes and comparison dimensions with explicit unknown/not-measured values.
-  - TRIANGULATE: both admitted, one disqualified, diagnostic-only failure, and missing comparison dimension.
-  - Checks: focused evaluator tests plus full runner.
-  - Commit evidence: pending.
+- [x] T4 — Implement gate-first qualification and comparison output.
+  - Route: delegated writer plus independent verifier.
+  - RED/GREEN evidence: observed missing qualification types and incomplete-evidence reason loss before the minimal gate-first result model passed.
+  - TRIANGULATE: both candidates admitted independently, mandatory assertion/duration/evidence failures despite maximum scores, diagnostic-only failure, missing dimension, immutability, and identity preflight.
+  - Checks: exact full runner passed 24 tests; independent verification found no material gap; 287 changed lines remained below budget.
+  - Commit evidence: `0215f358ba08728304ba4492ef0f43c2a5a3c07a` (`feat(bakeoff): enforce gate-first qualification`).
 - [ ] T5 — Verify the slice and align documentation.
   - Route: delegated independent verifier, followed by bounded documentation correction only if needed.
   - Checks: exact full test command, deterministic repeated run, canonical vocabulary, security exclusions, no synthetic overclaim, no provider selection, and diff review.
@@ -101,4 +100,4 @@ Tests exercise these public seams only. Internal assertion and event helpers wil
 
 ## Current status
 
-T1 is complete in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`. T2 is complete in `259fa97c953ed553ffc28c2e0b21f21fc256b6e0` with its explicit one-task size exception. T3 is complete in `23450a8b4771668303bce1844b52c137595e80ea`: all 20 tests and independent verification passed within the ordinary 400-line budget. T4 is next: gate-first qualification and comparison output without winner selection.
+T1–T4 are implemented in `aae62726cb3dd14ce6c365ba98edeb21919f5c1a`, `259fa97c953ed553ffc28c2e0b21f21fc256b6e0`, `23450a8b4771668303bce1844b52c137595e80ea`, and `0215f358ba08728304ba4492ef0f43c2a5a3c07a`. The exact full suite passes 24 tests. T5 is next: independently verify the complete slice, run the offline harness repeatedly, align documentation and canonical contract wording where necessary, and prepare final review evidence.
