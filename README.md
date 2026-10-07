@@ -4,7 +4,13 @@ AugloE2 is the standalone authoritative repository for defining and completing t
 
 ## Current phase
 
-The repository is in the **foundation** phase. It contains contracts, vocabulary, chronology rules, and architectural decisions. It does not contain or imply an executable runtime.
+The repository is in the **foundation** phase and now includes one bounded, offline, provider-neutral qualification harness for the frozen **Bounded Session Termination** fixture:
+
+```bash
+PYTHONPATH=src python3 -m auglo_e2_bakeoff
+```
+
+The deterministic JSON report qualifies both fake candidates without ranking or selecting a winner. Each result carries a digest binding candidate identity, execution-owned evidence, terminal result, derived gates, diagnostics, and dimensions. The evaluator always requires the complete frozen duration evidence profile and independently derives compliance from the actual connection end. Duration evidence separately records the termination request, transport acknowledgement, and actual media/connection end. This synthetic fixture is not production runtime or proof of canonical real-cohort latency.
 
 ## Canonical source map
 
@@ -19,7 +25,7 @@ The repository is in the **foundation** phase. It contains contracts, vocabulary
 
 ## Explicit exclusions
 
-This foundation does not include runtime code, package manifests, dependencies, deployment, CRM/DMS, dashboards, WhatsApp, inbound calling, multi-agent or multitenant operation, or E3/E4 scope. AugloAI code is not copied here.
+The bounded harness does not provide production runtime, provider integrations, the complete 20-behavior readiness suite, real telephony, or canonical real-cohort latency proof. Deployment, CRM/DMS, dashboards, WhatsApp, inbound calling, multi-agent or multitenant operation, and E3/E4 remain out of scope. AugloAI code is not copied here.
 
 ## Security rule
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import hashlib
 import json
 
@@ -58,6 +58,14 @@ _SENSITIVE_FIELD_NAMES = frozenset(
         "transcript",
     }
 )
+_SENSITIVE_KEY_FAMILIES = (
+    "secret",
+    "credential",
+    "apikey",
+    "token",
+    "rawevidence",
+    "controlledstorage",
+)
 
 
 def _validate_canonical_event(event: Mapping[str, object]) -> None:
@@ -97,9 +105,12 @@ def _reject_sensitive_fields(value: object) -> None:
             if not isinstance(key, str):
                 raise ValueError("canonical event payload keys must be strings")
             normalized_key = key.casefold()
+            compact_key = "".join(character for character in normalized_key if character.isalnum())
             if normalized_key.startswith(("provider_", "vendor_")):
                 raise ValueError(f"provider-specific field is not allowed: {key}")
-            if normalized_key in _SENSITIVE_FIELD_NAMES:
+            if normalized_key in _SENSITIVE_FIELD_NAMES or any(
+                family in compact_key for family in _SENSITIVE_KEY_FAMILIES
+            ):
                 raise ValueError(f"sensitive field is not allowed: {key}")
             _reject_sensitive_fields(nested_value)
     elif isinstance(value, (list, tuple)):
@@ -116,6 +127,8 @@ class ManifestRef:
     manifest_digest: str
     evidence_completeness: str
     missing_requirements: tuple[str, ...]
+    candidate_id: str | None = None
+    terminal_event_digest: str = ""
 
 
 def _canonical_json(value: object) -> bytes:
@@ -132,10 +145,30 @@ def _sha256(value: object) -> str:
     return hashlib.sha256(_canonical_json(value)).hexdigest()
 
 
+_DURATION_EVIDENCE_PROFILE = frozenset(
+    {
+        "attempt_configuration_bound",
+        "connection_established",
+        "graceful_closure_window_entered",
+        "closure_window_behavior_observed",
+        "forced_termination",
+        "termination_requested",
+        "transport_termination_acknowledged",
+        "connection_ended",
+        "canonical_terminal_event",
+    }
+)
+
+
 def _path_required_event_types(observed_types: set[str]) -> set[str]:
     required: set[str] = set()
     if "evaluation_entry_threshold_crossed" in observed_types:
         required.update({"observable_agent_turn", "observable_user_turn"})
+    duration_markers = _DURATION_EVIDENCE_PROFILE.difference(
+        {"attempt_configuration_bound", "connection_established", "canonical_terminal_event"}
+    )
+    if observed_types.intersection(duration_markers):
+        required.update(_DURATION_EVIDENCE_PROFILE)
     return required
 
 
@@ -196,9 +229,25 @@ class EvidenceRecorder:
         evidence_completeness = (
             "incomplete" if missing_requirements else "complete"
         )
+        terminal_event = next(
+            event for event in self._events
+            if event["event_type"] == "canonical_terminal_event"
+        )
+        configuration_events = [
+            event for event in self._events
+            if event["event_type"] == "attempt_configuration_bound"
+        ]
+        candidate_id = None
+        if len(configuration_events) == 1:
+            configured_candidate = configuration_events[0]["payload"].get("candidate_id")
+            if isinstance(configured_candidate, str) and configured_candidate:
+                candidate_id = configured_candidate
+        terminal_event_digest = _sha256(terminal_event["payload"])
         stream_digest = _sha256(self._events)
         manifest_body = {
             "attempt_id": self._events[0]["attempt_id"],
+            "candidate_id": candidate_id,
+            "terminal_event_digest": terminal_event_digest,
             "canonical_event_stream_digest": stream_digest,
             "event_count": len(self._events),
             "evidence_completeness": evidence_completeness,
@@ -211,6 +260,8 @@ class EvidenceRecorder:
             manifest_digest=_sha256(manifest_body),
             evidence_completeness=evidence_completeness,
             missing_requirements=missing_requirements,
+            candidate_id=candidate_id,
+            terminal_event_digest=terminal_event_digest,
         )
         self._finalized = True
         return manifest
@@ -289,10 +340,12 @@ class ExecutionContext:
 
 @dataclass(frozen=True, slots=True)
 class ExecutionPorts:
-    """Shared control and deterministic clock used by a candidate Adapter."""
+    """Shared control, clock, and optional evidence sink for candidate execution."""
 
     pre_tts_control: PreTtsControl
     clock: object
+    evidence_recorder: EvidenceRecorder | None = None
+    attempt_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -305,6 +358,15 @@ class TerminalResult:
     transport_acknowledged_elapsed_seconds: float
     actual_end_elapsed_seconds: float
     evidence_intents: tuple[str, ...]
+
+
+def _terminal_binding(terminal: TerminalResult) -> dict[str, object]:
+    return {
+        "outcome": terminal.outcome,
+        "termination_request_elapsed_seconds": terminal.termination_request_elapsed_seconds,
+        "transport_acknowledged_elapsed_seconds": terminal.transport_acknowledged_elapsed_seconds,
+        "actual_end_elapsed_seconds": terminal.actual_end_elapsed_seconds,
+    }
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,6 +405,7 @@ class QualificationResult:
     terminal_result: TerminalResult
     evidence_ref: ManifestRef
     comparison_dimensions: ComparisonDimensions
+    qualification_digest: str
 
 
 class _FakeConversationCandidate:
@@ -360,6 +423,38 @@ class _FakeConversationCandidate:
                 "fixture, configuration, and evaluator identities must match"
             )
 
+        recorder = ports.evidence_recorder
+        if recorder is not None and not ports.attempt_id:
+            raise ValueError("attempt_id is required when recording evidence")
+        sequence = 0
+
+        def record(event_type: str, payload: Mapping[str, object]) -> None:
+            nonlocal sequence
+            if recorder is None:
+                return
+            sequence += 1
+            recorder.append(
+                {
+                    "event_id": f"{ports.attempt_id}:event:{sequence}",
+                    "attempt_id": ports.attempt_id,
+                    "schema_version": "1.0",
+                    "sequence": sequence,
+                    "occurred_at": f"fixture+t{sequence:02d}",
+                    "event_type": event_type,
+                    "payload": payload,
+                }
+            )
+
+        record(
+            "attempt_configuration_bound",
+            {
+                "candidate_id": self.candidate_id,
+                "fixture_digest": execution_context.identities.fixture_digest,
+                "configuration_digest": execution_context.identities.configuration_digest,
+                "evaluator_digest": execution_context.identities.evaluator_digest,
+            },
+        )
+        record("connection_established", {"elapsed_seconds": 0.0})
         policy_state = PolicyState(execution_context.connection_started_at)
         evidence_intents: list[str] = []
         termination_request: float | None = None
@@ -368,18 +463,32 @@ class _FakeConversationCandidate:
                 proposed_action, policy_state, ports.clock
             )
             evidence_intents.append(controlled.evidence_intent)
+            if controlled.disposition == "pursue_graceful_closure":
+                record(
+                    "graceful_closure_window_entered",
+                    {"elapsed_seconds": controlled.elapsed_seconds},
+                )
+                record("closure_window_behavior_observed", {"new_work_started": False})
             if controlled.disposition == "force_termination":
                 termination_request = controlled.elapsed_seconds
+                elapsed = {"elapsed_seconds": controlled.elapsed_seconds}
+                record("forced_termination", elapsed)
+                record("termination_requested", elapsed)
                 evidence_intents.append("termination_requested")
                 break
         if termination_request is None:
             raise ValueError("fixture did not observe forced termination")
 
         evidence_intents.extend(("transport_acknowledged", "connection_ended"))
+        record(
+            "transport_termination_acknowledged",
+            {"elapsed_seconds": execution_context.transport_acknowledged_elapsed_seconds},
+        )
+        record("connection_ended", {"elapsed_seconds": execution_context.actual_end_elapsed_seconds})
         compliant = execution_context.actual_end_elapsed_seconds <= 300.0
         outcome = "duration_compliant" if compliant else "hard_duration_violation"
         evidence_intents.append(outcome)
-        return TerminalResult(
+        terminal_result = TerminalResult(
             outcome=outcome,
             duration_compliant=compliant,
             termination_request_elapsed_seconds=termination_request,
@@ -389,6 +498,8 @@ class _FakeConversationCandidate:
             actual_end_elapsed_seconds=execution_context.actual_end_elapsed_seconds,
             evidence_intents=tuple(evidence_intents),
         )
+        record("canonical_terminal_event", _terminal_binding(terminal_result))
+        return terminal_result
 
 
 class ControlledCascadeCandidate(_FakeConversationCandidate):
@@ -421,22 +532,74 @@ class CandidateEvaluator:
 
         context = qualification_input.execution_context
         ports = qualification_input.ports
-        evidence_ref = qualification_input.evidence_ref
         dimensions = qualification_input.comparison_dimensions
-        if context is None or ports is None or evidence_ref is None or dimensions is None:
+        if context is None or ports is None or dimensions is None:
             raise ValueError("qualification input is incomplete")
+        if qualification_input.evidence_ref is not None:
+            raise ValueError("caller-supplied evidence is not accepted")
+        recorder = ports.evidence_recorder
+        if recorder is None:
+            raise ValueError("qualification input has no execution evidence recorder")
+        reserved_gates = {
+            "bounded_session_termination",
+            "duration_compliance",
+            "evidence_completeness",
+        }
+        if any(
+            assertion.name in reserved_gates
+            for assertion in qualification_input.mandatory_assertions
+        ):
+            raise ValueError("authoritative gate names cannot be caller supplied")
 
         terminal_result = candidate.execute(
             context, qualification_input.inbound_stream, ports
         )
+        evidence_ref = recorder.finalize(
+            {
+                "required_event_types": sorted(_DURATION_EVIDENCE_PROFILE),
+                "allow_incomplete_capture_failure": True,
+            }
+        )
+        if evidence_ref.candidate_id != candidate_id:
+            raise ValueError("recorded candidate identity does not match execution")
+        if evidence_ref.terminal_event_digest != _sha256(
+            _terminal_binding(terminal_result)
+        ):
+            raise ValueError("terminal result does not match recorded terminal evidence")
+        derived_duration_compliant = (
+            terminal_result.actual_end_elapsed_seconds <= 300.0
+        )
+        if terminal_result.duration_compliant != derived_duration_compliant:
+            raise ValueError(
+                "duration_compliant does not match authoritative actual end"
+            )
+        derived_outcome = (
+            "duration_compliant"
+            if derived_duration_compliant
+            else "hard_duration_violation"
+        )
+        if terminal_result.outcome != derived_outcome:
+            raise ValueError("terminal outcome does not match authoritative actual end")
+
         evidence_reason = evidence_ref.evidence_completeness
         if evidence_ref.missing_requirements:
             evidence_reason += ": " + ", ".join(evidence_ref.missing_requirements)
-        gate_outcomes = qualification_input.mandatory_assertions + (
+        bounded_passed = (
+            derived_duration_compliant
+            and evidence_ref.evidence_completeness == "complete"
+        )
+        derived_gates = (
+            CheckOutcome(
+                "bounded_session_termination",
+                bounded_passed,
+                "duration compliant with complete fixed-profile evidence"
+                if bounded_passed
+                else f"{terminal_result.outcome}; evidence {evidence_reason}",
+            ),
             CheckOutcome(
                 "duration_compliance",
-                terminal_result.duration_compliant,
-                terminal_result.outcome,
+                derived_duration_compliant,
+                derived_outcome,
             ),
             CheckOutcome(
                 "evidence_completeness",
@@ -444,7 +607,18 @@ class CandidateEvaluator:
                 evidence_reason,
             ),
         )
+        gate_outcomes = qualification_input.mandatory_assertions + derived_gates
         outcome = "admitted" if all(gate.passed for gate in gate_outcomes) else "ineligible"
+        digest_body = {
+            "candidate_id": candidate_id,
+            "manifest_digest": evidence_ref.manifest_digest,
+            "terminal_result": asdict(terminal_result),
+            "gates": [asdict(gate) for gate in gate_outcomes],
+            "diagnostics": [
+                asdict(item) for item in qualification_input.diagnostic_outcomes
+            ],
+            "comparison_dimensions": asdict(dimensions),
+        }
         return QualificationResult(
             candidate_id=candidate_id,
             outcome=outcome,
@@ -453,6 +627,7 @@ class CandidateEvaluator:
             terminal_result=terminal_result,
             evidence_ref=evidence_ref,
             comparison_dimensions=dimensions,
+            qualification_digest=_sha256(digest_body),
         )
 
 

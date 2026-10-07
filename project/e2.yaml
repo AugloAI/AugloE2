@@ -1,6 +1,6 @@
 schema: auglo.e2.contract
 schema_version: 1
-contract_version: 0.17.1
+contract_version: 0.17.4
 milestone:
   id: E2
   state: foundation
@@ -246,7 +246,7 @@ closure_gate:
           stack_selected: false
           provider_selected: false
           runtime_selected: false
-        next_product_decision: define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+        next_product_decision: complete the 20-behavior suite and canonical real-cohort latency evidence before provider or winner selection
         identifier_namespace:
           separate_from_augloe2_experiment_lifecycle_c1_c10: true
           copy_legacy_identifiers_by_number: false
@@ -314,7 +314,7 @@ closure_gate:
       - provider
       - runtime
       - test framework
-    next_focused_product_contract_decision: Define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+    next_focused_product_contract_decision: Complete the 20-behavior suite and canonical real-cohort latency evidence before provider or winner selection
   unresolved_attribution:
     blocks_closure_by_default: true
     exception_authority: DR-5
@@ -404,6 +404,24 @@ first_stack_selection:
       - id: audio_native_half_cascade
         concept: audio-native understanding/reasoning producing controlled text/tool output -> deterministic pre-TTS policy/output control -> selected external/cloned TTS
         selects_provider_or_implementation: false
+    offline_qualification_harness:
+      state: implemented_bounded
+      command: PYTHONPATH=src python3 -m auglo_e2_bakeoff
+      fixture: Bounded Session Termination v1.0
+      execution: deterministic fake candidates through shared provider-neutral control and evaluator
+      result: canonical JSON with no winner selection
+      qualification_binding: digest over candidate identity, execution-owned manifest, terminal result, named gates, diagnostics, and dimensions
+      duration_profile_required_unconditionally: true
+      duration_compliance_derived_from: actual connection end at or before 300 elapsed seconds
+      duration_evidence_distinguishes:
+        - termination request
+        - transport acknowledgement
+        - actual media or connection end
+      does_not_resolve:
+        - production runtime or providers
+        - complete 20-behavior readiness suite
+        - real telephony
+        - canonical real-cohort latency proof
     adapter_deployment_dimension:
       independent_of_candidate_identity: true
       applies_to_both_candidates: true
@@ -465,7 +483,7 @@ first_stack_selection:
     state: unresolved
     selected_provider: none
     current_provider_facts_usable_without_fresh_primary_source_research: false
-  next_focused_product_contract_decision: Define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+  next_focused_product_contract_decision: Complete the 20-behavior suite and canonical real-cohort latency evidence before provider or winner selection
 
 experiment_priority:
   primary: conversational_agent_behavior
@@ -578,7 +596,7 @@ benchmark_evidence_archive:
     - encryption implementation
     - IAM product
     - model provider
-  next_product_decision: define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+  next_product_decision: complete the 20-behavior suite and canonical real-cohort latency evidence before provider or winner selection
 
 operational_attempt_ledger:
   includes_every_admitted_dialing_attempt: true
@@ -754,8 +772,8 @@ config_snapshot:
         - original Snapshot Digest
         - evidence
   unresolved:
-    - executable candidate qualification/bakeoff matrix
-    - exact provider-neutral pass/fail evidence for both architecture candidates
+    - complete 20-behavior candidate qualification coverage
+    - canonical real-cohort latency evidence
     - per-Adapter managed versus selectively self-hosted deployment choices
     - winning stack
     - exact real-cohort capability set
@@ -869,7 +887,7 @@ observability_portability:
       - storage implementation
       - serialization technology
       - exact stack
-    next_product_decision: define the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+    next_product_decision: complete the 20-behavior suite and canonical real-cohort latency evidence before provider or winner selection
 
 failure_attribution:
   state: resolved
@@ -1082,10 +1100,9 @@ provenance:
     reason: AugloAI is a container of independent repositories
 
 current_gaps:
-  - No runtime has been extracted or implemented
-  - Operational Attempt Ledger and executable evidence serialization schemas are not yet defined
-  - Capability coverage is resolved for the current initial readiness baseline but remains explicitly revisable before the real cohort stack and capability freeze
-  - The first-stack selection strategy, provider-neutral modular-monolith shape, and two architecture candidate identities are resolved, but the executable qualification matrix, exact provider-neutral pass/fail evidence, winning stack, provider, runtime, per-Adapter deployment choices, and exact real-cohort capability set are not selected
-  - The next focused product decision is the executable qualification/bakeoff matrix and exact provider-neutral pass/fail evidence for controlled_cascade and audio_native_half_cascade before provider selection
+  - The bounded offline provider-neutral qualification harness is not a production runtime
+  - Operational Attempt Ledger and production evidence serialization schemas are not yet defined
+  - The complete 20-behavior readiness suite, real telephony, and canonical real-cohort latency proof remain unresolved
+  - No winning stack, provider, production runtime, per-Adapter deployment, or exact real-cohort capability set is selected
   - Current provider facts require fresh primary-source research before any provider selection
   - Controlled Storage adapters are intentionally unselected

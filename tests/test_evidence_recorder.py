@@ -23,11 +23,14 @@ def canonical_event(sequence: int, event_type: str = "attempt_admitted") -> dict
 class EvidenceCompletenessTests(unittest.TestCase):
     def test_minimum_duration_path_finalizes_complete(self) -> None:
         duration_path = [
-            "attempt_admitted",
+            "attempt_configuration_bound",
             "connection_established",
             "graceful_closure_window_entered",
             "closure_window_behavior_observed",
             "forced_termination",
+            "termination_requested",
+            "transport_termination_acknowledged",
+            "connection_ended",
             "canonical_terminal_event",
         ]
         recorder = EvidenceRecorder()
@@ -38,6 +41,21 @@ class EvidenceCompletenessTests(unittest.TestCase):
 
         self.assertEqual("complete", manifest.evidence_completeness)
         self.assertEqual((), manifest.missing_requirements)
+
+    def test_duration_path_requirements_cannot_be_omitted_by_caller(self) -> None:
+        recorder = EvidenceRecorder()
+        recorder.append(canonical_event(1, "forced_termination"))
+        recorder.append(canonical_event(2, "canonical_terminal_event"))
+
+        with self.assertRaises(ValueError) as raised:
+            recorder.finalize(
+                {"required_event_types": ["canonical_terminal_event"]}
+            )
+
+        message = str(raised.exception)
+        self.assertIn("attempt_configuration_bound", message)
+        self.assertIn("connection_established", message)
+        self.assertIn("connection_ended", message)
 
     def test_successful_finalization_is_complete_deterministic_and_immutable(self) -> None:
         events = [
@@ -280,6 +298,31 @@ class CanonicalEventStreamTests(unittest.TestCase):
                 event["payload"] = payload
                 with self.assertRaisesRegex(ValueError, message):
                     EvidenceRecorder().append(event)
+
+    def test_append_rejects_broader_sensitive_key_families_recursively(self) -> None:
+        forbidden_keys = (
+            "client_secret",
+            "database_credentials",
+            "API-Key",
+            "accessToken",
+            "rawEvidence",
+            "controlled-storage-location",
+        )
+
+        for key in forbidden_keys:
+            with self.subTest(key=key):
+                event = canonical_event(1)
+                event["payload"] = {"safe_metadata": [{key: "must-not-enter-git"}]}
+                with self.assertRaisesRegex(ValueError, "sensitive field is not allowed"):
+                    EvidenceRecorder().append(event)
+
+        safe = canonical_event(1)
+        safe["payload"] = {
+            "snapshot_digest": "sha256:snapshot",
+            "behavior_hash": "sha256:behavior",
+            "result_ref": "result:001",
+        }
+        EvidenceRecorder().append(safe)
 
     def test_append_rejects_nested_provider_trace_identifiers(self) -> None:
         provider_trace = canonical_event(1)
