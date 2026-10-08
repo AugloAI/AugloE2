@@ -46,12 +46,14 @@ The Module owns the canonical versioned behavior inventory internally. Scenario 
 
 ## Work tasks
 
-- [ ] T1 — Implement and verify the readiness tracer as one reviewable vertical slice.
+- [x] T1 — Implement and verify the readiness tracer as one reviewable vertical slice.
   - Route: delegated bounded writer with strict RED/GREEN through the confirmed public Interface, followed by independent verification.
-  - Expected edit surfaces: `src/auglo_e2_bakeoff/readiness.py`, `src/auglo_e2_bakeoff/__init__.py`, `tests/test_pre_run_readiness.py`, `README.md`, `project/e2.yaml`, and this task record.
-  - Review budget: 400 changed lines; do not compress tests, contracts, or documentation to fit.
-  - Acceptance checks: focused readiness tests; full existing unittest suite; repeated deterministic readiness result; unchanged deterministic bakeoff command; no provider/runtime selection; exact missing-behavior reporting.
-  - Commit evidence: pending.
+  - Final edit surfaces: `src/auglo_e2_bakeoff/readiness.py`, `src/auglo_e2_bakeoff/__init__.py`, `tests/test_pre_run_readiness.py`, `README.md`, `project/e2.yaml`, and this task record.
+  - TDD evidence: RED first failed because `PreRunReadinessSuite` was absent; GREEN passed the bounded scenario with the exact 19-behavior gap. A second RED exposed an empty evidence digest; GREEN bound candidate and request identities into canonical JSON. A third RED exposed missing diagnostic preservation; GREEN preserved the diagnostic without making it readiness-blocking.
+  - Review budget: the planning record was isolated in `08e831d`; the behavior/test/docs commit contains 361 additions and 3 deletions, staying within the 400-line budget without compressing tests or contracts.
+  - Final independent verification: focused readiness tests passed 3/3; the full 35-test suite passed twice; repeated bakeoff CLI output was byte-identical at 3,460 bytes with SHA-256 `3261645358d3dfd74e4d27df7835b75c62e8a2cc5da91d615c05c404a4a68dab`; `git diff --check` passed; exact-path staging excluded `.pi/`, `openspec/`, and the task record.
+  - Outcome: both fake candidates pass Bounded Session Termination `1.0`; readiness remains `not_ready` with exactly 19 missing behaviors; mandatory failure blocks coverage; diagnostic failure is preserved and nonblocking; the supplied Behavior Hash is bound but explicitly not validated.
+  - Commit evidence: `7503ba79eedb3e69e6c118190713e8e6cb0c7e62` (`feat(readiness): add bounded termination tracer`).
 
 ## Checks policy
 
@@ -66,4 +68,4 @@ Strict TDD applies. Tests cross only `PreRunReadinessSuite.run`; RED must be obs
 
 ## Current status
 
-T1 is in progress. The public readiness Seam is confirmed; implementation has not started.
+T1 is complete in `7503ba79eedb3e69e6c118190713e8e6cb0c7e62`. The first readiness tracer is verified, remains explicitly incomplete at 1 of 20 canonical behaviors, and selects no provider or production runtime.
