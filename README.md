@@ -12,6 +12,8 @@ PYTHONPATH=src python3 -m auglo_e2_bakeoff
 
 The deterministic JSON report qualifies both fake candidates without ranking or selecting a winner. Each result carries a digest binding candidate identity, execution-owned evidence, terminal result, derived gates, diagnostics, and dimensions. The evaluator always requires the complete frozen duration evidence profile and independently derives compliance from the actual connection end. Duration evidence separately records the termination request, transport acknowledgement, and actual media/connection end. This synthetic fixture is not production runtime or proof of canonical real-cohort latency.
 
+The public `PreRunReadinessSuite.run(candidate, request)` Interface now executes Bounded Session Termination `1.0` as the first slice of the versioned 20-behavior readiness inventory. Its deterministic result binds the supplied Behavior Hash without claiming to validate it, preserves mandatory and diagnostic outcomes, and uses only stable evidence hashes. The result remains `not_ready` and names the other 19 uncovered behaviors; it is not a complete readiness or production claim.
+
 ## Canonical source map
 
 | Fact | Canonical owner |
@@ -25,7 +27,7 @@ The deterministic JSON report qualifies both fake candidates without ranking or 
 
 ## Explicit exclusions
 
-The bounded harness does not provide production runtime, provider integrations, the complete 20-behavior readiness suite, real telephony, or canonical real-cohort latency proof. Deployment, CRM/DMS, dashboards, WhatsApp, inbound calling, multi-agent or multitenant operation, and E3/E4 remain out of scope. AugloAI code is not copied here.
+The bounded harness does not provide production runtime, provider integrations, coverage of the other 19 readiness behaviors, real telephony, or canonical real-cohort latency proof. Deployment, CRM/DMS, dashboards, WhatsApp, inbound calling, multi-agent or multitenant operation, and E3/E4 remain out of scope. AugloAI code is not copied here.
 
 ## Security rule
 

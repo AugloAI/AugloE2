@@ -1,6 +1,6 @@
 schema: auglo.e2.contract
 schema_version: 1
-contract_version: 0.17.4
+contract_version: 0.17.5
 milestone:
   id: E2
   state: foundation
@@ -417,9 +417,19 @@ first_stack_selection:
         - termination request
         - transport acknowledgement
         - actual media or connection end
+      readiness_tracer:
+        state: implemented_initial_behavior
+        public_interface: PreRunReadinessSuite.run(candidate, request)
+        suite_version: "1.0"
+        covered_mandatory_behavior: bounded-session-termination
+        scenario_version: "1.0"
+        missing_mandatory_behavior_count: 19
+        readiness_status: not_ready
+        supplied_behavior_hash_validation: not_performed
+        evidence_references: stable_non_sensitive_hashes
       does_not_resolve:
         - production runtime or providers
-        - complete 20-behavior readiness suite
+        - remaining 19 readiness behaviors
         - real telephony
         - canonical real-cohort latency proof
     adapter_deployment_dimension:

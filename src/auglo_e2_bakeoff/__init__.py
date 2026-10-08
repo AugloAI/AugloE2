@@ -631,6 +631,14 @@ class CandidateEvaluator:
         )
 
 
+from .readiness import (
+    ConversationCandidate,
+    PreRunReadinessSuite,
+    ReadinessRequest,
+    ReadinessResult,
+)
+
+
 __all__ = [
     "AudioNativeHalfCascadeCandidate",
     "CandidateEvaluator",
@@ -640,6 +648,7 @@ __all__ = [
     "ComparisonDimensions",
     "ControlledAction",
     "ControlledCascadeCandidate",
+    "ConversationCandidate",
     "EvidenceRecorder",
     "ExecutionContext",
     "ExecutionPorts",
@@ -647,9 +656,12 @@ __all__ = [
     "ParityIdentities",
     "ParityIdentityMismatch",
     "PolicyState",
+    "PreRunReadinessSuite",
     "PreTtsControl",
     "ProposedAction",
     "QualificationInput",
     "QualificationResult",
+    "ReadinessRequest",
+    "ReadinessResult",
     "TerminalResult",
 ]
