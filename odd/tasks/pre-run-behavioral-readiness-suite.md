@@ -77,6 +77,7 @@ The founder confirmed that evidence-completeness v1.0 covers only the currently 
   - Review budget: the complete pre-commit candidate measured 162 changed lines against `650cea56a6bee3f8585dfda717434cb9c28b71fb`, below the 400-line budget.
   - Outcome: both fake candidates cover exactly 2/20 behaviors and remain `not_ready`; delayed termination preserves evidence coverage independently; incomplete controlled-path evidence names `closure_window_behavior_observed` and cannot claim completeness.
   - Commit evidence: `f9c3608f9647c0fff413a8f4476ac2ce6efc43d2` (`feat(readiness): verify evidence completeness`).
+  - Native review evidence: lineage `review-f7372e33af2a599f` approved the committed slice from `650cea56a6bee3f8585dfda717434cb9c28b71fb`; exact acknowledgement completed and authority burned.
 
 ## Checks policy
 
@@ -91,4 +92,4 @@ Strict TDD applies. Tests cross only `PreRunReadinessSuite.run`; RED must be obs
 
 ## Current status
 
-T1 and T2 are complete. The suite is explicitly incomplete at 2 of 20 canonical behaviors; T2 covers only controlled-duration-path event completeness and introduces no provider, runtime, storage, legal, or general artifact-completeness claim.
+T1 and T2 are complete and natively approved. The suite is explicitly incomplete at 2 of 20 canonical behaviors; T2 covers only controlled-duration-path event completeness and introduces no provider, runtime, storage, legal, or general artifact-completeness claim.
