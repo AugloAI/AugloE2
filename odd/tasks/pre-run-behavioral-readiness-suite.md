@@ -54,6 +54,7 @@ The Module owns the canonical versioned behavior inventory internally. Scenario 
   - Final independent verification: focused readiness tests passed 3/3; the full 35-test suite passed twice; repeated bakeoff CLI output was byte-identical at 3,460 bytes with SHA-256 `3261645358d3dfd74e4d27df7835b75c62e8a2cc5da91d615c05c404a4a68dab`; `git diff --check` passed; exact-path staging excluded `.pi/`, `openspec/`, and the task record.
   - Outcome: both fake candidates pass Bounded Session Termination `1.0`; readiness remains `not_ready` with exactly 19 missing behaviors; mandatory failure blocks coverage; diagnostic failure is preserved and nonblocking; the supplied Behavior Hash is bound but explicitly not validated.
   - Commit evidence: `7503ba79eedb3e69e6c118190713e8e6cb0c7e62` (`feat(readiness): add bounded termination tracer`).
+  - Native review evidence: lineage `review-56a8b5c08698c18b` approved the committed slice from `08e831dc781595734d437922247eb5778e2d8a91`; exact acknowledgement completed and authority burned.
 
 ## Checks policy
 
@@ -68,4 +69,4 @@ Strict TDD applies. Tests cross only `PreRunReadinessSuite.run`; RED must be obs
 
 ## Current status
 
-T1 is complete in `7503ba79eedb3e69e6c118190713e8e6cb0c7e62`. The first readiness tracer is verified, remains explicitly incomplete at 1 of 20 canonical behaviors, and selects no provider or production runtime.
+T1 is complete in `7503ba79eedb3e69e6c118190713e8e6cb0c7e62` and its native review is approved and acknowledged. The first readiness tracer remains explicitly incomplete at 1 of 20 canonical behaviors and selects no provider or production runtime.
