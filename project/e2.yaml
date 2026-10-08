@@ -1,6 +1,6 @@
 schema: auglo.e2.contract
 schema_version: 1
-contract_version: 0.17.5
+contract_version: 0.17.6
 milestone:
   id: E2
   state: foundation
@@ -418,12 +418,17 @@ first_stack_selection:
         - transport acknowledgement
         - actual media or connection end
       readiness_tracer:
-        state: implemented_initial_behavior
+        state: implemented_two_behaviors
         public_interface: PreRunReadinessSuite.run(candidate, request)
         suite_version: "1.0"
-        covered_mandatory_behavior: bounded-session-termination
-        scenario_version: "1.0"
-        missing_mandatory_behavior_count: 19
+        mandatory_scenarios:
+          - behavior: behavior-evidence-completeness
+            scenario_version: "1.0"
+            scope: existing controlled duration path only
+            assertion_source: evaluator-owned evidence_completeness gate
+          - behavior: bounded-session-termination
+            scenario_version: "1.0"
+        missing_mandatory_behavior_count: 18
         readiness_status: not_ready
         supplied_behavior_hash_validation: not_performed
         evidence_references: stable_non_sensitive_hashes

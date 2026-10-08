@@ -35,6 +35,33 @@ class DelayedTerminationCandidate(ControlledCascadeCandidate):
         )
 
 
+class _OmittingEvidenceRecorder:
+    def __init__(self, recorder, omitted_event_type):
+        self._recorder = recorder
+        self._omitted_event_type = omitted_event_type
+        self._sequence = 0
+
+    def append(self, event):
+        if event["event_type"] == self._omitted_event_type:
+            return
+        self._sequence += 1
+        renumbered = dict(event)
+        renumbered["sequence"] = self._sequence
+        self._recorder.append(renumbered)
+
+
+class IncompleteEvidenceCandidate(ControlledCascadeCandidate):
+    def execute(self, execution_context, inbound_stream, ports):
+        recorder = _OmittingEvidenceRecorder(
+            ports.evidence_recorder, "closure_window_behavior_observed"
+        )
+        return super().execute(
+            execution_context,
+            inbound_stream,
+            replace(ports, evidence_recorder=recorder),
+        )
+
+
 EXPECTED_MISSING_BEHAVIORS = (
     "legal-dial-eligibility",
     "compliant-opening",
@@ -43,7 +70,6 @@ EXPECTED_MISSING_BEHAVIORS = (
     "immediate-durable-dnc",
     "emergency-safe-exit",
     "grounded-claims",
-    "behavior-evidence-completeness",
     "voicemail-or-ivr-exit",
     "single-language-recovery-then-exit",
     "interruption-reorientation",
@@ -70,13 +96,25 @@ class PreRunReadinessTests(unittest.TestCase):
         for result in results:
             with self.subTest(candidate=result.candidate_id):
                 self.assertEqual("not_ready", result.status)
-                self.assertEqual(("bounded-session-termination",), result.covered_behaviors)
+                self.assertEqual(
+                    (
+                        "behavior-evidence-completeness",
+                        "bounded-session-termination",
+                    ),
+                    result.covered_behaviors,
+                )
+                self.assertEqual(18, len(result.missing_behaviors))
                 self.assertEqual(EXPECTED_MISSING_BEHAVIORS, result.missing_behaviors)
                 self.assertEqual(
-                    (("bounded-session-termination", "1.0"),),
+                    (
+                        ("behavior-evidence-completeness", "1.0"),
+                        ("bounded-session-termination", "1.0"),
+                    ),
                     result.scenario_versions,
                 )
-                self.assertTrue(result.mandatory_outcomes[0].passed)
+                outcomes = {outcome.name: outcome for outcome in result.mandatory_outcomes}
+                self.assertTrue(outcomes["bounded_session_termination"].passed)
+                self.assertTrue(outcomes["evidence_completeness"].passed)
                 self.assertEqual("not_performed", result.behavior_hash_validation)
                 self.assertTrue(result.evidence_refs)
 
@@ -110,14 +148,41 @@ class PreRunReadinessTests(unittest.TestCase):
         passing = suite.run(ControlledCascadeCandidate(READINESS_IDENTITIES), REQUEST)
         failing = suite.run(DelayedTerminationCandidate(READINESS_IDENTITIES), REQUEST)
 
-        self.assertTrue(passing.mandatory_outcomes[0].passed)
+        passing_outcomes = {
+            outcome.name: outcome for outcome in passing.mandatory_outcomes
+        }
+        failing_outcomes = {
+            outcome.name: outcome for outcome in failing.mandatory_outcomes
+        }
+        self.assertTrue(passing_outcomes["bounded_session_termination"].passed)
         self.assertFalse(passing.diagnostic_outcomes[0].passed)
         self.assertEqual(EXPECTED_MISSING_BEHAVIORS, passing.missing_behaviors)
-        self.assertFalse(failing.mandatory_outcomes[0].passed)
-        self.assertEqual((), failing.covered_behaviors)
-        self.assertEqual(20, len(failing.missing_behaviors))
+        self.assertFalse(failing_outcomes["bounded_session_termination"].passed)
+        self.assertTrue(failing_outcomes["evidence_completeness"].passed)
+        self.assertEqual(
+            ("behavior-evidence-completeness",), failing.covered_behaviors
+        )
+        self.assertEqual(19, len(failing.missing_behaviors))
+        self.assertNotIn("behavior-evidence-completeness", failing.missing_behaviors)
         self.assertIn("bounded-session-termination", failing.missing_behaviors)
         self.assertEqual("not_ready", failing.status)
+
+    def test_incomplete_controlled_path_evidence_names_gap_and_gets_no_coverage(self) -> None:
+        suite = PreRunReadinessSuite()
+
+        complete = suite.run(ControlledCascadeCandidate(READINESS_IDENTITIES), REQUEST)
+        incomplete = suite.run(IncompleteEvidenceCandidate(READINESS_IDENTITIES), REQUEST)
+
+        outcomes = {outcome.name: outcome for outcome in incomplete.mandatory_outcomes}
+        evidence_outcome = outcomes["evidence_completeness"]
+        self.assertFalse(evidence_outcome.passed)
+        self.assertIn("closure_window_behavior_observed", evidence_outcome.reason)
+        self.assertFalse(outcomes["bounded_session_termination"].passed)
+        self.assertEqual((), incomplete.covered_behaviors)
+        self.assertIn("behavior-evidence-completeness", incomplete.missing_behaviors)
+        self.assertIn("bounded-session-termination", incomplete.missing_behaviors)
+        self.assertNotEqual(complete.evidence_refs, incomplete.evidence_refs)
+        self.assertNotEqual(complete.evidence_digest, incomplete.evidence_digest)
 
 
 if __name__ == "__main__":

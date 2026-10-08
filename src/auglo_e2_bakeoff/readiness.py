@@ -149,12 +149,30 @@ class PreRunReadinessSuite:
                 ),
             ),
         )
-        bounded_outcome = next(
-            outcome
-            for outcome in qualification.gate_outcomes
-            if outcome.name == "bounded_session_termination"
+        evaluator_outcomes = {
+            outcome.name: outcome for outcome in qualification.gate_outcomes
+        }
+        mandatory_outcomes = (
+            evaluator_outcomes["evidence_completeness"],
+            evaluator_outcomes["bounded_session_termination"],
         )
-        covered = ("bounded-session-termination",) if bounded_outcome.passed else ()
+        scenario_versions = (
+            ("behavior-evidence-completeness", "1.0"),
+            ("bounded-session-termination", "1.0"),
+        )
+        behavior_gates = {
+            "behavior-evidence-completeness": evaluator_outcomes[
+                "evidence_completeness"
+            ],
+            "bounded-session-termination": evaluator_outcomes[
+                "bounded_session_termination"
+            ],
+        }
+        covered = tuple(
+            behavior
+            for behavior in _CANONICAL_BEHAVIORS
+            if behavior in behavior_gates and behavior_gates[behavior].passed
+        )
         missing = tuple(
             behavior for behavior in _CANONICAL_BEHAVIORS if behavior not in covered
         )
@@ -174,8 +192,10 @@ class PreRunReadinessSuite:
             "status": "not_ready",
             "covered_behaviors": covered,
             "missing_behaviors": missing,
-            "scenario_versions": (("bounded-session-termination", "1.0"),),
-            "mandatory_outcomes": (asdict(bounded_outcome),),
+            "scenario_versions": scenario_versions,
+            "mandatory_outcomes": [
+                asdict(outcome) for outcome in mandatory_outcomes
+            ],
             "diagnostic_outcomes": [
                 asdict(outcome) for outcome in diagnostic_outcomes
             ],
@@ -201,8 +221,8 @@ class PreRunReadinessSuite:
             status="not_ready",
             covered_behaviors=covered,
             missing_behaviors=missing,
-            scenario_versions=(("bounded-session-termination", "1.0"),),
-            mandatory_outcomes=(bounded_outcome,),
+            scenario_versions=scenario_versions,
+            mandatory_outcomes=mandatory_outcomes,
             diagnostic_outcomes=diagnostic_outcomes,
             evidence_refs=evidence_refs,
             evidence_digest=evidence_digest,
