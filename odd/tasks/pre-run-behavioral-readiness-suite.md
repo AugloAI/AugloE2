@@ -63,7 +63,7 @@ The founder confirmed that evidence-completeness v1.0 covers only the currently 
   - Outcome: both fake candidates pass Bounded Session Termination `1.0`; readiness remains `not_ready` with exactly 19 missing behaviors; mandatory failure blocks coverage; diagnostic failure is preserved and nonblocking; the supplied Behavior Hash is bound but explicitly not validated.
   - Commit evidence: `7503ba79eedb3e69e6c118190713e8e6cb0c7e62` (`feat(readiness): add bounded termination tracer`).
   - Native review evidence: lineage `review-56a8b5c08698c18b` approved the committed slice from `08e831dc781595734d437922247eb5778e2d8a91`; exact acknowledgement completed and authority burned.
-- [ ] T2 — Add controlled-path Behavior Evidence Completeness v1.0.
+- [x] T2 — Add controlled-path Behavior Evidence Completeness v1.0.
   - Route: delegated bounded writer with strict RED/GREEN through the unchanged `PreRunReadinessSuite.run` Interface, followed by independent verification.
   - Expected edit surfaces: `src/auglo_e2_bakeoff/readiness.py`, `tests/test_pre_run_readiness.py`, `README.md`, `project/e2.yaml`, and this task record.
   - RED observed: the focused readiness suite failed 3 tests because passing candidates covered only `bounded-session-termination` instead of both mandatory behaviors.
@@ -73,8 +73,10 @@ The founder confirmed that evidence-completeness v1.0 covers only the currently 
   - TRIANGULATE: an incomplete-evidence candidate omitting `closure_window_behavior_observed` names that missing requirement, cannot claim either mandatory behavior, changes the digest/evidence references, and passes as the fourth focused test.
   - Required triangulation: both passing fake candidates cover 2/20; delayed termination preserves evidence coverage while losing duration coverage; incomplete controlled-path evidence names missing requirements and cannot cover evidence completeness.
   - First independent verification: all structural and runnable checks passed, but final readiness was blocked solely because this T2 RED/GREEN history had not yet been recorded in the task document.
-  - Review budget: 400 changed lines; current complete candidate is 156 changed lines against `650cea56a6bee3f8585dfda717434cb9c28b71fb`.
-  - Commit evidence: pending.
+  - Final independent verification: the recorded RED/GREEN history resolved the sole blocker; focused tests passed 4/4, the full 36-test suite passed twice, repeated bakeoff output was byte-identical, `git diff --check` passed, and only the five intended paths changed.
+  - Review budget: the complete pre-commit candidate measured 162 changed lines against `650cea56a6bee3f8585dfda717434cb9c28b71fb`, below the 400-line budget.
+  - Outcome: both fake candidates cover exactly 2/20 behaviors and remain `not_ready`; delayed termination preserves evidence coverage independently; incomplete controlled-path evidence names `closure_window_behavior_observed` and cannot claim completeness.
+  - Commit evidence: `f9c3608f9647c0fff413a8f4476ac2ce6efc43d2` (`feat(readiness): verify evidence completeness`).
 
 ## Checks policy
 
@@ -89,4 +91,4 @@ Strict TDD applies. Tests cross only `PreRunReadinessSuite.run`; RED must be obs
 
 ## Current status
 
-T1 is complete and natively approved. T2 is in progress on `feature/readiness-evidence-completeness`; it is scoped to controlled-duration-path event completeness and must leave the suite explicitly incomplete at 2 of 20 canonical behaviors.
+T1 and T2 are complete. The suite is explicitly incomplete at 2 of 20 canonical behaviors; T2 covers only controlled-duration-path event completeness and introduces no provider, runtime, storage, legal, or general artifact-completeness claim.
